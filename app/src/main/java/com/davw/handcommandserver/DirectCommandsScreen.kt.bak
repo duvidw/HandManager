@@ -53,7 +53,18 @@ fun DirectCommandsScreen(
         "Cmd 7",
         "Cmd 8"
     )
-    val commandDescriptions = viewModel.commandDescriptions
+    val commandDescriptions = remember {
+        val initialDescriptions = try {
+            loadDefaultDescriptionsForStart(context, commandLabels.size)
+        } catch (_: IOException) {
+            fallbackDescriptions(commandLabels.size)
+        } catch (_: JSONException) {
+            fallbackDescriptions(commandLabels.size)
+        } catch (_: IllegalArgumentException) {
+            fallbackDescriptions(commandLabels.size)
+        }
+        mutableStateListOf(*initialDescriptions.toTypedArray())
+    }
     val importJsonLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { selectedUri ->
@@ -112,9 +123,7 @@ fun DirectCommandsScreen(
 
                     OutlinedTextField(
                         value = commandDescriptions[index],
-                        onValueChange = {
-                            commandDescriptions[index] = it
-                        },
+                        onValueChange = { commandDescriptions[index] = it },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyLarge
