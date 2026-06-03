@@ -3,7 +3,10 @@ package com.davw.handcommandserver
 import android.content.Context
 import android.content.Intent
 import android.content.ActivityNotFoundException
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -61,6 +64,26 @@ fun DirectCommandsScreen(
             "Description for command 7",
             "Description for command 8"
         )
+    }
+    val importJsonLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { selectedUri ->
+        if (selectedUri == null) {
+            showMessage(context, "Import canceled")
+        } else {
+            try {
+                val loaded = readCommandsFromUri(context, selectedUri)
+                applyLoadedDescriptions(commandDescriptions, loaded)
+                saveCommandsToFile(context, commandDescriptions)
+                showMessage(context, "Imported and saved to $DIRECT_COMMANDS_FILE_NAME")
+            } catch (e: IOException) {
+                showMessage(context, "Import failed: ${e.message ?: "I/O error"}")
+            } catch (e: JSONException) {
+                showMessage(context, "Import failed: invalid JSON")
+            } catch (e: IllegalArgumentException) {
+                showMessage(context, "Import failed: ${e.message}")
+            }
+        }
     }
 
     Column(
@@ -174,9 +197,10 @@ fun DirectCommandsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Button(
+                modifier = Modifier.weight(1f),
                 onClick = {
                     try {
                         saveCommandsToFile(context, commandDescriptions)
@@ -191,6 +215,15 @@ fun DirectCommandsScreen(
                 }
             ) {
                 Text("Share")
+            }
+
+            Button(
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    importJsonLauncher.launch(arrayOf("application/json", "text/plain"))
+                }
+            ) {
+                Text("Import")
             }
         }
 
@@ -236,6 +269,13 @@ private fun readCommandsFromInternalFile(context: Context): List<String> {
 private fun readCommandsFromAssets(context: Context): List<String> {
     val jsonText = context.assets.open(DEFAULT_COMMANDS_FILE_NAME).bufferedReader(Charsets.UTF_8).use {
         it.readText()
+    }
+    return parseDescriptions(jsonText)
+}
+
+private fun readCommandsFromUri(context: Context, uri: Uri): List<String> {
+    val jsonText = context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8).use {
+        it?.readText() ?: throw IOException("Could not open selected file")
     }
     return parseDescriptions(jsonText)
 }
