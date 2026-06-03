@@ -54,16 +54,36 @@ fun DirectCommandsScreen(
         "Cmd 8"
     )
     val commandDescriptions = remember {
-        mutableStateListOf(
-            "Description for command 1",
-            "Description for command 2",
-            "Description for command 3",
-            "Description for command 4",
-            "Description for command 5",
-            "Description for command 6",
-            "Description for command 7",
-            "Description for command 8"
-        )
+        val initialDescriptions = try {
+            loadDefaultDescriptionsForStart(context, commandLabels.size)
+        } catch (_: IOException) {
+            fallbackDescriptions(commandLabels.size)
+        } catch (_: JSONException) {
+            fallbackDescriptions(commandLabels.size)
+        } catch (_: IllegalArgumentException) {
+            fallbackDescriptions(commandLabels.size)
+        }
+        mutableStateListOf(*initialDescriptions.toTypedArray())
+    }
+    val importJsonLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { selectedUri ->
+        if (selectedUri == null) {
+            showMessage(context, "Import canceled")
+        } else {
+            try {
+                val loaded = readCommandsFromUri(context, selectedUri)
+                applyLoadedDescriptions(commandDescriptions, loaded)
+                saveCommandsToFile(context, commandDescriptions)
+                showMessage(context, "Imported and saved to $DIRECT_COMMANDS_FILE_NAME")
+            } catch (e: IOException) {
+                showMessage(context, "Import failed: ${e.message ?: "I/O error"}")
+            } catch (e: JSONException) {
+                showMessage(context, "Import failed: invalid JSON")
+            } catch (e: IllegalArgumentException) {
+                showMessage(context, "Import failed: ${e.message}")
+            }
+        }
     }
     val importJsonLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -288,6 +308,18 @@ private fun parseDescriptions(jsonText: String): List<String> {
         descriptions.add(jsonDescriptions.getString(index))
     }
     return descriptions
+}
+
+private fun loadDefaultDescriptionsForStart(context: Context, expectedCount: Int): List<String> {
+    val loadedDescriptions = readCommandsFromAssets(context)
+    if (loadedDescriptions.size != expectedCount) {
+        throw IllegalArgumentException("Expected $expectedCount descriptions, found ${loadedDescriptions.size}")
+    }
+    return loadedDescriptions
+}
+
+private fun fallbackDescriptions(size: Int): List<String> {
+    return List(size) { index -> "Description for command ${index + 1}" }
 }
 
 private fun applyLoadedDescriptions(current: MutableList<String>, loaded: List<String>) {
