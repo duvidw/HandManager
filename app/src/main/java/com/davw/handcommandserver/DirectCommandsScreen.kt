@@ -20,11 +20,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -54,6 +61,10 @@ fun DirectCommandsScreen(
         "Cmd 8"
     )
     val commandDescriptions = viewModel.commandDescriptions
+    val commandDescriptionFields = remember {
+        mutableStateListOf(*commandDescriptions.map(::TextFieldValue).toTypedArray())
+    }
+    var selectedDescriptionIndex by remember { mutableStateOf<Int?>(null) }
     val importJsonLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { selectedUri ->
@@ -63,6 +74,7 @@ fun DirectCommandsScreen(
             try {
                 val loaded = readCommandsFromUri(context, selectedUri)
                 applyLoadedDescriptions(commandDescriptions, loaded)
+                applyLoadedTextFieldValues(commandDescriptionFields, loaded)
                 saveCommandsToFile(context, commandDescriptions)
                 showMessage(context, "Imported and saved to $DIRECT_COMMANDS_FILE_NAME")
             } catch (e: IOException) {
@@ -100,6 +112,16 @@ fun DirectCommandsScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val isSelected = selectedDescriptionIndex == index
+                    LaunchedEffect(isSelected, commandDescriptionFields[index].text) {
+                        if (isSelected) {
+                            val text = commandDescriptionFields[index].text
+                            commandDescriptionFields[index] = commandDescriptionFields[index].copy(
+                                selection = TextRange(0, text.length)
+                            )
+                        }
+                    }
+
                     Button(
                         onClick = {
                             // replace with your real command call
@@ -111,11 +133,20 @@ fun DirectCommandsScreen(
                     }
 
                     OutlinedTextField(
-                        value = commandDescriptions[index],
+                        value = commandDescriptionFields[index],
                         onValueChange = {
-                            commandDescriptions[index] = it
+                            commandDescriptionFields[index] = it
+                            commandDescriptions[index] = it.text
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    selectedDescriptionIndex = index
+                                } else if (!focusState.isFocused && selectedDescriptionIndex == index) {
+                                    selectedDescriptionIndex = null
+                                }
+                            },
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyLarge
                     )
@@ -151,6 +182,7 @@ fun DirectCommandsScreen(
                     try {
                         val loaded = readCommandsFromInternalFile(context)
                         applyLoadedDescriptions(commandDescriptions, loaded)
+                        applyLoadedTextFieldValues(commandDescriptionFields, loaded)
                         showMessage(context, "Loaded from $DIRECT_COMMANDS_FILE_NAME")
                     } catch (e: IOException) {
                         showMessage(context, "Load failed: ${e.message ?: "I/O error"}")
@@ -170,6 +202,7 @@ fun DirectCommandsScreen(
                     try {
                         val loaded = readCommandsFromAssets(context)
                         applyLoadedDescriptions(commandDescriptions, loaded)
+                        applyLoadedTextFieldValues(commandDescriptionFields, loaded)
                         showMessage(context, "Defaults loaded")
                     } catch (e: IOException) {
                         showMessage(context, "Defaults failed: ${e.message ?: "I/O error"}")
@@ -299,6 +332,15 @@ private fun applyLoadedDescriptions(current: MutableList<String>, loaded: List<S
     }
     loaded.forEachIndexed { index, value ->
         current[index] = value
+    }
+}
+
+private fun applyLoadedTextFieldValues(current: MutableList<TextFieldValue>, loaded: List<String>) {
+    if (loaded.size != current.size) {
+        throw IllegalArgumentException("Expected ${current.size} descriptions, found ${loaded.size}")
+    }
+    loaded.forEachIndexed { index, value ->
+        current[index] = TextFieldValue(value)
     }
 }
 
