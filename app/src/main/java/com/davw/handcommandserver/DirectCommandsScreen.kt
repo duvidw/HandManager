@@ -20,8 +20,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,18 +51,7 @@ fun DirectCommandsScreen(
         "Cmd 7",
         "Cmd 8"
     )
-    val commandDescriptions = remember {
-        val initialDescriptions = try {
-            loadDefaultDescriptionsForStart(context, commandLabels.size)
-        } catch (_: IOException) {
-            fallbackDescriptions(commandLabels.size)
-        } catch (_: JSONException) {
-            fallbackDescriptions(commandLabels.size)
-        } catch (_: IllegalArgumentException) {
-            fallbackDescriptions(commandLabels.size)
-        }
-        mutableStateListOf(*initialDescriptions.toTypedArray())
-    }
+    val commandDescriptions = viewModel.commandDescriptions
     val importJsonLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { selectedUri ->
@@ -73,27 +60,7 @@ fun DirectCommandsScreen(
         } else {
             try {
                 val loaded = readCommandsFromUri(context, selectedUri)
-                applyLoadedDescriptions(commandDescriptions, loaded)
-                saveCommandsToFile(context, commandDescriptions)
-                showMessage(context, "Imported and saved to $DIRECT_COMMANDS_FILE_NAME")
-            } catch (e: IOException) {
-                showMessage(context, "Import failed: ${e.message ?: "I/O error"}")
-            } catch (e: JSONException) {
-                showMessage(context, "Import failed: invalid JSON")
-            } catch (e: IllegalArgumentException) {
-                showMessage(context, "Import failed: ${e.message}")
-            }
-        }
-    }
-    val importJsonLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { selectedUri ->
-        if (selectedUri == null) {
-            showMessage(context, "Import canceled")
-        } else {
-            try {
-                val loaded = readCommandsFromUri(context, selectedUri)
-                applyLoadedDescriptions(commandDescriptions, loaded)
+                viewModel.replaceCommandDescriptions(loaded)
                 saveCommandsToFile(context, commandDescriptions)
                 showMessage(context, "Imported and saved to $DIRECT_COMMANDS_FILE_NAME")
             } catch (e: IOException) {
@@ -143,7 +110,7 @@ fun DirectCommandsScreen(
 
                     OutlinedTextField(
                         value = commandDescriptions[index],
-                        onValueChange = { commandDescriptions[index] = it },
+                        onValueChange = { viewModel.updateCommandDescription(index, it) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyLarge
@@ -179,7 +146,7 @@ fun DirectCommandsScreen(
                 onClick = {
                     try {
                         val loaded = readCommandsFromInternalFile(context)
-                        applyLoadedDescriptions(commandDescriptions, loaded)
+                        viewModel.replaceCommandDescriptions(loaded)
                         showMessage(context, "Loaded from $DIRECT_COMMANDS_FILE_NAME")
                     } catch (e: IOException) {
                         showMessage(context, "Load failed: ${e.message ?: "I/O error"}")
@@ -198,7 +165,7 @@ fun DirectCommandsScreen(
                 onClick = {
                     try {
                         val loaded = readCommandsFromAssets(context)
-                        applyLoadedDescriptions(commandDescriptions, loaded)
+                        viewModel.replaceCommandDescriptions(loaded)
                         showMessage(context, "Defaults loaded")
                     } catch (e: IOException) {
                         showMessage(context, "Defaults failed: ${e.message ?: "I/O error"}")
@@ -308,27 +275,6 @@ private fun parseDescriptions(jsonText: String): List<String> {
         descriptions.add(jsonDescriptions.getString(index))
     }
     return descriptions
-}
-
-private fun loadDefaultDescriptionsForStart(context: Context, expectedCount: Int): List<String> {
-    val loadedDescriptions = readCommandsFromAssets(context)
-    if (loadedDescriptions.size != expectedCount) {
-        throw IllegalArgumentException("Expected $expectedCount descriptions, found ${loadedDescriptions.size}")
-    }
-    return loadedDescriptions
-}
-
-private fun fallbackDescriptions(size: Int): List<String> {
-    return List(size) { index -> "Description for command ${index + 1}" }
-}
-
-private fun applyLoadedDescriptions(current: MutableList<String>, loaded: List<String>) {
-    if (loaded.size != current.size) {
-        throw IllegalArgumentException("Expected ${current.size} descriptions, found ${loaded.size}")
-    }
-    loaded.forEachIndexed { index, value ->
-        current[index] = value
-    }
 }
 
 private fun showMessage(context: Context, message: String) {
