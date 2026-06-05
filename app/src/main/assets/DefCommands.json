@@ -1,12 +1,36 @@
 {
-  "descriptions": [
-    "Calibrate all figures",
-    "Set all to open",
-    "Set all to close",
-    "Set all to 50%",
-    "Set all to 25%",
-    "Set all to 75%",
-    "Set all to 10%",
-    "Set all to 90%"
+  "commands": [
+    {
+      "name": "Cmd 10",
+      "action": "Calibrate all figures"
+    },
+    {
+      "name": "Cmd 20",
+      "action": "Set all to open"
+    },
+    {
+      "name": "Cmd 30",
+      "action": "Set all to close"
+    },
+    {
+      "name": "Cmd 40",
+      "action": "Set all to 50%"
+    },
+    {
+      "name": "Cmd 50",
+      "action": "Set all to 25%"
+    },
+    {
+      "name": "Cmd 60",
+      "action": "Set all to 75%"
+    },
+    {
+      "name": "Cmd 70",
+      "action": "Set all to 10%"
+    },
+    {
+      "name": "Cmd 80",
+      "action": "Set all to 90%"
+    }
   ]
 }

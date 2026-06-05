@@ -12,7 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import org.json.JSONException
-import org.json.JSONObject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,8 +26,8 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     private val _events = MutableStateFlow<List<String>>(emptyList())
     val events = _events.asStateFlow()
     var selectedCommand by mutableStateOf<Int?>(null)
-    val commandDescriptions = mutableStateListOf<String>().apply {
-        addAll(loadInitialCommandDescriptions())
+    val directCommands = mutableStateListOf<DirectCommandConfig>().apply {
+        addAll(loadInitialDirectCommands())
     }
 
     //var motorAbsPosVals = IntArray(4) { 0}
@@ -149,16 +148,17 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     fun commandStatus() {
         //_commandStatus.value = "Motor Status"
     }
-    fun updateCommandDescription(index: Int, value: String) {
-        commandDescriptions[index] = value
+    fun updateCommandAction(index: Int, value: String) {
+        val current = directCommands[index]
+        directCommands[index] = current.copy(action = value)
     }
 
-    fun replaceCommandDescriptions(loaded: List<String>) {
-        if (loaded.size != commandDescriptions.size) {
-            throw IllegalArgumentException("Expected ${commandDescriptions.size} descriptions, found ${loaded.size}")
+    fun replaceDirectCommands(loaded: List<DirectCommandConfig>) {
+        if (loaded.size != directCommands.size) {
+            throw IllegalArgumentException("Expected ${directCommands.size} commands, found ${loaded.size}")
         }
-        loaded.forEachIndexed { index, description ->
-            commandDescriptions[index] = description
+        loaded.forEachIndexed { index, command ->
+            directCommands[index] = command
         }
     }
 
@@ -191,36 +191,31 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     }
 
-    private fun loadInitialCommandDescriptions(): List<String> {
+    private fun loadInitialDirectCommands(): List<DirectCommandConfig> {
         return try {
             val jsonText = application.assets.open("DefCommands.json").bufferedReader(Charsets.UTF_8).use {
                 it.readText()
             }
-            val descriptions = parseDescriptions(jsonText)
-            if (descriptions.size != defaultCommandCount) {
-                fallbackDescriptions(defaultCommandCount)
+            val commands = parseDirectCommands(jsonText)
+            if (commands.size != defaultCommandCount) {
+                fallbackDirectCommands(defaultCommandCount)
             } else {
-                descriptions
+                commands
             }
         } catch (_: IOException) {
-            fallbackDescriptions(defaultCommandCount)
+            fallbackDirectCommands(defaultCommandCount)
         } catch (_: JSONException) {
-            fallbackDescriptions(defaultCommandCount)
+            fallbackDirectCommands(defaultCommandCount)
         }
     }
 
-    private fun parseDescriptions(jsonText: String): List<String> {
-        val root = JSONObject(jsonText)
-        val jsonDescriptions = root.getJSONArray("descriptions")
-        val descriptions = mutableListOf<String>()
-        for (index in 0 until jsonDescriptions.length()) {
-            descriptions.add(jsonDescriptions.getString(index))
+    private fun fallbackDirectCommands(size: Int): List<DirectCommandConfig> {
+        return List(size) { index ->
+            DirectCommandConfig(
+                name = "Cmd ${index + 1}",
+                action = "Action for command ${index + 1}"
+            )
         }
-        return descriptions
-    }
-
-    private fun fallbackDescriptions(size: Int): List<String> {
-        return List(size) { index -> "Description for command ${index + 1}" }
     }
 
 }

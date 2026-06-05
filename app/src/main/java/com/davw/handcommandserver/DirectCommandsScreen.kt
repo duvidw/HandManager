@@ -35,13 +35,11 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import org.json.JSONArray
 import org.json.JSONException
-import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 
-private const val DIRECT_COMMANDS_FILE_NAME = "DirectCommansds.json"
+private const val DIRECT_COMMANDS_FILE_NAME = "DirectCommands.json"
 private const val DEFAULT_COMMANDS_FILE_NAME = "DefCommands.json"
 
 @Composable
@@ -50,21 +48,11 @@ fun DirectCommandsScreen(
     onPrevScreen: () -> Unit
 ) {
     val context = LocalContext.current
-    val commandLabels = listOf(
-        "Cmd 1",
-        "Cmd 2",
-        "Cmd 3",
-        "Cmd 4x",
-        "Cmd 5",
-        "Cmd 6",
-        "Cmd 7",
-        "Cmd 8"
-    )
-    val commandDescriptions = viewModel.commandDescriptions
-    val commandDescriptionFields = remember {
-        mutableStateListOf(*commandDescriptions.map(::TextFieldValue).toTypedArray())
+    val directCommands = viewModel.directCommands
+    val commandActionFields = remember {
+        mutableStateListOf(*directCommands.map { TextFieldValue(it.action) }.toTypedArray())
     }
-    var selectedDescriptionIndex by remember { mutableStateOf<Int?>(null) }
+    var selectedActionIndex by remember { mutableStateOf<Int?>(null) }
     val importJsonLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { selectedUri ->
@@ -73,9 +61,9 @@ fun DirectCommandsScreen(
         } else {
             try {
                 val loaded = readCommandsFromUri(context, selectedUri)
-                applyLoadedDescriptions(commandDescriptions, loaded)
-                applyLoadedTextFieldValues(commandDescriptionFields, loaded)
-                saveCommandsToFile(context, commandDescriptions)
+                applyLoadedCommands(directCommands, loaded)
+                applyLoadedTextFieldValues(commandActionFields, loaded)
+                saveCommandsToFile(context, directCommands)
                 showMessage(context, "Imported and saved to $DIRECT_COMMANDS_FILE_NAME")
             } catch (e: IOException) {
                 showMessage(context, "Import failed: ${e.message ?: "I/O error"}")
@@ -106,17 +94,17 @@ fun DirectCommandsScreen(
                 .padding(top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            itemsIndexed(commandLabels) { index, label ->
+            itemsIndexed(directCommands) { index, command ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val isSelected = selectedDescriptionIndex == index
-                    LaunchedEffect(isSelected, commandDescriptionFields[index].text) {
+                    val isSelected = selectedActionIndex == index
+                    LaunchedEffect(isSelected, commandActionFields[index].text) {
                         if (isSelected) {
-                            val text = commandDescriptionFields[index].text
-                            commandDescriptionFields[index] = commandDescriptionFields[index].copy(
+                            val text = commandActionFields[index].text
+                            commandActionFields[index] = commandActionFields[index].copy(
                                 selection = TextRange(0, text.length)
                             )
                         }
@@ -129,22 +117,22 @@ fun DirectCommandsScreen(
                             // viewModel.sendIntCommandPos(...)
                         }
                     ) {
-                        Text(label)
+                        Text(command.name)
                     }
 
                     OutlinedTextField(
-                        value = commandDescriptionFields[index],
+                        value = commandActionFields[index],
                         onValueChange = {
-                            commandDescriptionFields[index] = it
-                            commandDescriptions[index] = it.text
+                            commandActionFields[index] = it
+                            viewModel.updateCommandAction(index, it.text)
                         },
                         modifier = Modifier
                             .weight(1f)
                             .onFocusChanged { focusState ->
                                 if (focusState.isFocused) {
-                                    selectedDescriptionIndex = index
-                                } else if (!focusState.isFocused && selectedDescriptionIndex == index) {
-                                    selectedDescriptionIndex = null
+                                    selectedActionIndex = index
+                                } else if (!focusState.isFocused && selectedActionIndex == index) {
+                                    selectedActionIndex = null
                                 }
                             },
                         singleLine = true,
@@ -164,7 +152,7 @@ fun DirectCommandsScreen(
                 modifier = Modifier.weight(1f),
                 onClick = {
                     try {
-                        saveCommandsToFile(context, commandDescriptions)
+                        saveCommandsToFile(context, directCommands)
                         showMessage(context, "Saved to $DIRECT_COMMANDS_FILE_NAME")
                     } catch (e: IOException) {
                         showMessage(context, "Save failed: ${e.message ?: "I/O error"}")
@@ -181,8 +169,8 @@ fun DirectCommandsScreen(
                 onClick = {
                     try {
                         val loaded = readCommandsFromInternalFile(context)
-                        applyLoadedDescriptions(commandDescriptions, loaded)
-                        applyLoadedTextFieldValues(commandDescriptionFields, loaded)
+                        applyLoadedCommands(directCommands, loaded)
+                        applyLoadedTextFieldValues(commandActionFields, loaded)
                         showMessage(context, "Loaded from $DIRECT_COMMANDS_FILE_NAME")
                     } catch (e: IOException) {
                         showMessage(context, "Load failed: ${e.message ?: "I/O error"}")
@@ -201,8 +189,8 @@ fun DirectCommandsScreen(
                 onClick = {
                     try {
                         val loaded = readCommandsFromAssets(context)
-                        applyLoadedDescriptions(commandDescriptions, loaded)
-                        applyLoadedTextFieldValues(commandDescriptionFields, loaded)
+                        applyLoadedCommands(directCommands, loaded)
+                        applyLoadedTextFieldValues(commandActionFields, loaded)
                         showMessage(context, "Defaults loaded")
                     } catch (e: IOException) {
                         showMessage(context, "Defaults failed: ${e.message ?: "I/O error"}")
@@ -227,7 +215,7 @@ fun DirectCommandsScreen(
                 modifier = Modifier.weight(1f),
                 onClick = {
                     try {
-                        saveCommandsToFile(context, commandDescriptions)
+                        saveCommandsToFile(context, directCommands)
                         shareCommandsJson(context)
                     } catch (e: IOException) {
                         showMessage(context, "Share failed: ${e.message ?: "I/O error"}")
@@ -271,76 +259,56 @@ fun DirectCommandsScreen(
     }
 }
 
-private fun saveCommandsToFile(context: Context, descriptions: List<String>) {
-    val root = JSONObject()
-    val jsonDescriptions = JSONArray()
-    descriptions.forEach { jsonDescriptions.put(it) }
-    root.put("descriptions", jsonDescriptions)
+private fun saveCommandsToFile(context: Context, commands: List<DirectCommandConfig>) {
     context.openFileOutput(DIRECT_COMMANDS_FILE_NAME, Context.MODE_PRIVATE).use { stream ->
-        stream.write(root.toString().toByteArray(Charsets.UTF_8))
+        stream.write(directCommandsToJson(commands).toByteArray(Charsets.UTF_8))
     }
 }
 
-private fun readCommandsFromInternalFile(context: Context): List<String> {
+private fun readCommandsFromInternalFile(context: Context): List<DirectCommandConfig> {
     val file = File(context.filesDir, DIRECT_COMMANDS_FILE_NAME)
     if (!file.exists()) {
         throw IOException("$DIRECT_COMMANDS_FILE_NAME was not found")
     }
     val jsonText = file.readText(Charsets.UTF_8)
-    return parseDescriptions(jsonText)
+    return parseDirectCommands(jsonText)
 }
 
-private fun readCommandsFromAssets(context: Context): List<String> {
+private fun readCommandsFromAssets(context: Context): List<DirectCommandConfig> {
     val jsonText = context.assets.open(DEFAULT_COMMANDS_FILE_NAME).bufferedReader(Charsets.UTF_8).use {
         it.readText()
     }
-    return parseDescriptions(jsonText)
+    return parseDirectCommands(jsonText)
 }
 
-private fun readCommandsFromUri(context: Context, uri: Uri): List<String> {
+private fun readCommandsFromUri(context: Context, uri: Uri): List<DirectCommandConfig> {
     val jsonText = context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8).use {
         it?.readText() ?: throw IOException("Could not open selected file")
     }
-    return parseDescriptions(jsonText)
+    return parseDirectCommands(jsonText)
 }
 
-private fun parseDescriptions(jsonText: String): List<String> {
-    val root = JSONObject(jsonText)
-    val jsonDescriptions = root.getJSONArray("descriptions")
-    val descriptions = mutableListOf<String>()
-    for (index in 0 until jsonDescriptions.length()) {
-        descriptions.add(jsonDescriptions.getString(index))
-    }
-    return descriptions
-}
-
-private fun loadDefaultDescriptionsForStart(context: Context, expectedCount: Int): List<String> {
-    val loadedDescriptions = readCommandsFromAssets(context)
-    if (loadedDescriptions.size != expectedCount) {
-        throw IllegalArgumentException("Expected $expectedCount descriptions, found ${loadedDescriptions.size}")
-    }
-    return loadedDescriptions
-}
-
-private fun fallbackDescriptions(size: Int): List<String> {
-    return List(size) { index -> "Description for command ${index + 1}" }
-}
-
-private fun applyLoadedDescriptions(current: MutableList<String>, loaded: List<String>) {
+private fun applyLoadedCommands(
+    current: MutableList<DirectCommandConfig>,
+    loaded: List<DirectCommandConfig>
+) {
     if (loaded.size != current.size) {
-        throw IllegalArgumentException("Expected ${current.size} descriptions, found ${loaded.size}")
+        throw IllegalArgumentException("Expected ${current.size} commands, found ${loaded.size}")
     }
     loaded.forEachIndexed { index, value ->
         current[index] = value
     }
 }
 
-private fun applyLoadedTextFieldValues(current: MutableList<TextFieldValue>, loaded: List<String>) {
+private fun applyLoadedTextFieldValues(
+    current: MutableList<TextFieldValue>,
+    loaded: List<DirectCommandConfig>
+) {
     if (loaded.size != current.size) {
-        throw IllegalArgumentException("Expected ${current.size} descriptions, found ${loaded.size}")
+        throw IllegalArgumentException("Expected ${current.size} commands, found ${loaded.size}")
     }
     loaded.forEachIndexed { index, value ->
-        current[index] = TextFieldValue(value)
+        current[index] = TextFieldValue(value.action)
     }
 }
 
