@@ -117,9 +117,7 @@ fun DirectCommandsScreen(
 
                     Button(
                         onClick = {
-                            // replace with your real command call
-                            // example:
-                            // viewModel.sendIntCommandPos(...)
+                            viewModel.sendDirectCommand(index + 1)
                         }
                     ) {
                         Text(command.name)

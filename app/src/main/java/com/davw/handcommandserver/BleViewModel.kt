@@ -165,6 +165,9 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     fun sendText(toString: String) {
         TODO("Not yet implemented")
     }
+    fun sendDirectCommand(cmnd: Int) {
+        server.sendCommandNotification(cmnd.toByte())
+    }
     fun sendIntCommand(cmnd: Int, iMotor: Int = 0) {
         server.sendCommandNotificationToMotor(cmnd.toByte(),iMotor)
     }
