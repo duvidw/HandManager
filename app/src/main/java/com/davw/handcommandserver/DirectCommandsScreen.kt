@@ -101,7 +101,7 @@ fun DirectCommandsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val isSelected = selectedActionIndex == index
-                    LaunchedEffect(isSelected, commandActionFields[index].text) {
+                    LaunchedEffect(isSelected) {
                         if (isSelected) {
                             val text = commandActionFields[index].text
                             commandActionFields[index] = commandActionFields[index].copy(
