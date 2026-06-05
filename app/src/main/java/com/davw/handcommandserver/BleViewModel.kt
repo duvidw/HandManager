@@ -1,7 +1,9 @@
 package com.davw.handcommandserver
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.app.Application
+import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.getValue
@@ -11,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
+import androidx.core.content.ContextCompat
 import org.json.JSONException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +25,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     private val server = NimbleServer(application)
     private val defaultCommandCount = 8
+    private var serverStarted = false
 
     private val _events = MutableStateFlow<List<String>>(emptyList())
     val events = _events.asStateFlow()
@@ -71,11 +75,20 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun startServer() {
+        if (serverStarted) {
+            return
+        }
         server.start(application.applicationContext)
+        serverStarted = true
     }
 
-    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    fun sendNotification(ty : Int) = server.sendNotification(ty)
+    fun sendNotification(ty : Int) {
+        if (!hasBluetoothConnectPermission()) {
+            _events.update { it + "Missing BLUETOOTH_CONNECT permission" }
+            return
+        }
+        server.sendNotification(ty)
+    }
     fun subscribe() = server.subscribe()
     fun disconnect() = server.disconnect()
     fun setMotorsPos() = server.setMotorsPos()
@@ -171,6 +184,13 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     fun sendIntCommand(cmnd: Int, iMotor: Int = 0) {
         server.sendCommandNotificationToMotor(cmnd.toByte(),iMotor)
     }
+    fun notifyScreenChanged(screen: AppScreen) {
+        val screenId = when (screen) {
+            AppScreen.Main -> 1
+            AppScreen.DirectCommands -> 2
+        }
+        server.sendNavigationNotification(screenId)
+    }
     fun sendIntCommandPos(cmnd: Int) {
         when (cmnd) {
             0 -> {
@@ -192,6 +212,14 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             else -> Log.d("TAG","Other"+ cmnd.toString())
         }
 
+    }
+
+    private fun hasBluetoothConnectPermission(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            ContextCompat.checkSelfPermission(
+                application.applicationContext,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun loadInitialDirectCommands(): List<DirectCommandConfig> {

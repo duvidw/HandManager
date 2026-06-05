@@ -1,10 +1,5 @@
 package com.davw.handcommandserver
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,7 +20,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -34,12 +28,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 
 @Composable
 fun CustomStyledButtonRound(
@@ -96,57 +88,8 @@ fun BleScreen(
     viewModel: BleViewModel,
     onNextScreen: () -> Unit
 ) {
-    val context = LocalContext.current
     val events by viewModel.events.collectAsState()
     val currentStatus by viewModel.statusText.collectAsState()
-
-    val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.BLUETOOTH_ADVERTISE
-        )
-    } else {
-        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-    }
-
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissionsMap ->
-        val areGranted = permissionsMap.values.all { it }
-        if (areGranted) {
-            viewModel.startServer()
-        }
-    }
-
-    val performBluetoothAction: (Int) -> Unit = { id ->
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val isGranted = ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.BLUETOOTH_CONNECT
-            ) == PackageManager.PERMISSION_GRANTED
-
-            if (isGranted) {
-                viewModel.sendNotification(id)
-            } else {
-                launcher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
-            }
-        } else {
-            viewModel.sendNotification(id)
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        val allPermissionsGranted = permissionsToRequest.all {
-            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-        }
-
-        if (!allPermissionsGranted) {
-            launcher.launch(permissionsToRequest)
-        } else {
-            viewModel.startServer()
-        }
-    }
 
     var slider1 by remember { mutableFloatStateOf(50f) }
     var slider2 by remember { mutableFloatStateOf(50f) }
@@ -171,12 +114,12 @@ fun BleScreen(
         ) {
             CustomStyledButtonRound(
                 text = "Abs",
-                onClick = { performBluetoothAction(1) }
+                onClick = { viewModel.sendNotification(1) }
             )
 
             CustomStyledButtonRound(
                 text = "Step",
-                onClick = { performBluetoothAction(2) }
+                onClick = { viewModel.sendNotification(2) }
             )
 
             CustomStyledButtonRound(
