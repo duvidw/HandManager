@@ -39,6 +39,11 @@ import org.json.JSONException
 import java.io.File
 import java.io.IOException
 
+/*
+ * This file contains the UI for the Direct Commands screen, which allows users to manage a list of direct commands.
+ * Users can add, edit, and delete commands, as well as import/export the command list as JSON.
+ */
+
 private const val DIRECT_COMMANDS_FILE_NAME = "DirectCommands.json"
 private const val DEFAULT_COMMANDS_FILE_NAME = "DefCommands.json"
 
