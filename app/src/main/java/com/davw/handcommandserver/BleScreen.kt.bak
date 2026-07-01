@@ -1,0 +1,361 @@
+package com.davw.handcommandserver
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults.buttonColors
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+@Composable
+fun CustomStyledButtonRound(
+    text: String,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        contentPadding = PaddingValues(
+            top = 5.dp,
+            bottom = 5.dp,
+            start = 10.dp,
+            end = 10.dp
+        )
+    ) {
+        Text(
+            text = text,
+            textAlign = TextAlign.Center,
+            style = LocalTextStyle.current.copy(
+                lineHeight = 24.sp
+            )
+        )
+    }
+}
+
+@Composable
+fun CustomStyledButtonRound2(
+    text: String,
+    onClick: () -> Unit,
+    hPad: Dp = 1.dp,
+    wPad: Dp = 2.dp
+) {
+    Button(
+        onClick = onClick,
+        contentPadding = PaddingValues(
+            top = hPad,
+            bottom = hPad,
+            start = wPad,
+            end = wPad
+        )
+    ) {
+        Text(
+            text = text,
+            textAlign = TextAlign.Center,
+            style = LocalTextStyle.current.copy(
+                lineHeight = 24.sp
+            )
+        )
+    }
+}
+
+@Composable
+fun BleScreen(
+    viewModel: BleViewModel,
+    onNextScreen: () -> Unit
+) {
+    val events by viewModel.events.collectAsState()
+    val currentStatus by viewModel.statusText.collectAsState()
+
+    var slider0 by remember { mutableFloatStateOf(50f) }
+    var slider1 by remember { mutableFloatStateOf(50f) }
+    var slider2 by remember { mutableFloatStateOf(50f) }
+    var slider3 by remember { mutableFloatStateOf(50f) }
+    var slider4 by remember { mutableFloatStateOf(50f) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            "Android Hand Commander",
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            CustomStyledButtonRound(
+                text = "Abs",
+                onClick = { viewModel.sendNotification(1) }
+            )
+
+            CustomStyledButtonRound(
+                text = "Step",
+                onClick = { viewModel.sendNotification(2) }
+            )
+
+            CustomStyledButtonRound(
+                text = "Subscribe",
+                onClick = { viewModel.subscribe() }
+            )
+
+            CustomStyledButtonRound(
+                text = "Disconnect",
+                onClick = { viewModel.disconnect() }
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            CustomStyledButtonRound(
+                text = "Stop",
+                onClick = { viewModel.stopMotor() }
+            )
+            CustomStyledButtonRound(
+                text = "Forward",
+                onClick = { viewModel.forwardMotor() }
+            )
+
+            CustomStyledButtonRound(
+                text = "Backward",
+                onClick = { viewModel.backwardMotor() }
+            )
+            CustomStyledButtonRound(
+                text = "Abs position",
+                onClick = { viewModel.absPosMotor() }
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(
+                onClick = { viewModel.setMotor(0) },
+                colors = buttonColors(
+                    containerColor = viewModel.run { getButMotorColor(1) },
+                    contentColor = Color.White
+                )
+            ) {
+                Text("1")
+            }
+
+            Button(
+                onClick = { viewModel.setMotor(1) },
+                colors = buttonColors(
+                    containerColor = viewModel.run { getButMotorColor(2) },
+                    contentColor = Color.White
+                )
+            ) {
+                Text("2")
+            }
+
+            Button(
+                onClick = { viewModel.setMotor(2) },
+                colors = buttonColors(
+                    containerColor = viewModel.run { getButMotorColor(3) },
+                    contentColor = Color.White
+                )
+            ) {
+                Text("3")
+            }
+
+            Button(
+                onClick = { viewModel.setMotor(3) },
+                colors = buttonColors(
+                    containerColor = viewModel.run { getButMotorColor(4) },
+                    contentColor = Color.White
+                )
+            ) {
+                Text("4")
+            }
+        }
+
+        Text(
+            text = currentStatus,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(top = 12.dp)
+        )
+
+        SliderRow(
+            viewModel,
+            value0 = slider0,
+            value1 = slider1,
+            value2 = slider2,
+            value3 = slider3,
+            value4 = slider4,
+            onValue1Change = { slider1 = it },
+            onValue2Change = { slider2 = it },
+            onValue3Change = { slider3 = it },
+            onValue4Change = { slider4 = it }
+        )
+
+        val numbers = (1..12).toList()
+
+        val numCmnd = intArrayOf(1, 2, 3, 4, 0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
+        val buttonsText = arrayOf(
+            "1", "2", "3", "4",
+            "0", "5", "6", "7",
+            "8", "9", "10", "11"
+        )
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(4),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(numbers) { num ->
+                Button(
+                    onClick = { viewModel.sendIntCommandPos(numCmnd[num - 1]) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    val txt: String = buttonsText[num - 1]
+                    Text(txt)
+                }
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+        ) {
+            items(events.reversed()) { msg ->
+                Text(msg)
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(
+                onClick = { },
+                enabled = false
+            ) {
+                Text("Prev")
+            }
+
+            Button(onClick = onNextScreen) {
+                Text("Next")
+            }
+        }
+    }
+}
+// TBD1
+@Composable
+fun SliderRow(
+    viewModel: BleViewModel,
+    value0: Float,
+    value1: Float,
+    value2: Float,
+    value3: Float,
+    value4: Float,
+    onValue0Change: (Float) -> Unit,
+    onValue1Change: (Float) -> Unit,
+    onValue2Change: (Float) -> Unit,
+    onValue3Change: (Float) -> Unit,
+    onValue4Change: (Float) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(160.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        SliderWithValue(viewModel, 0, "V1", value = value0, onValue0Change)
+        SliderWithValue(viewModel, 1, "M1", value = value1, onValue1Change)
+        SliderWithValue(viewModel, 2, "M2", value = value2, onValue2Change)
+        SliderWithValue(viewModel, 3, "M3", value = value3, onValue3Change)
+        SliderWithValue(viewModel, 4, "M4", value = value4, onValue4Change)
+    }
+}
+
+@Composable
+fun SliderWithValue(
+    viewModel: BleViewModel,
+    index: Int,
+    name: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(25.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CustomStyledButtonRound2("<", { viewModel.sendIntCommand(21, index) })
+
+        Text(
+            text = name,
+            modifier = Modifier
+                .padding(start = 12.dp)
+                .weight(0.5f)
+                .height(25.dp),
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = 0f..100f,
+            modifier = Modifier
+                .weight(2f)
+                .height(25.dp),
+            enabled = viewModel.updateSlider(index, value)
+        )
+
+        Text(
+            text = viewModel.getSlider(index).toString(),
+            modifier = Modifier
+                .padding(start = 12.dp)
+                .weight(0.5f)
+                .height(25.dp),
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        CustomStyledButtonRound2(">", { viewModel.sendIntCommand(22, index) })
+    }
+}
