@@ -47,6 +47,7 @@ import java.io.IOException
 private const val DIRECT_COMMANDS_FILE_NAME = "DirectCommands.json"
 private const val DEFAULT_COMMANDS_FILE_NAME = "DefCommands.json"
 
+//@Preview
 @Composable
 fun DirectCommandsScreen(
     viewModel: BleViewModel,

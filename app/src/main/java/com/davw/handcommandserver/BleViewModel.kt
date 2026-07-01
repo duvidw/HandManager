@@ -37,7 +37,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     //var motorAbsPosVals = IntArray(4) { 0}
 
     // 4 sliders, initial value = 50f
-    val _sliders = MutableStateFlow(FloatArray(4) { 50f })
+    val _sliders = MutableStateFlow(FloatArray(5) { 50f })
     val sliders = _sliders
 
     fun updateSlider(index: Int, value: Float): Boolean{
@@ -89,6 +89,40 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         }
         server.sendNotification(ty)
     }
+
+    fun sendMotorsVelocity(ty : Int, motorNum: Int, value: Float) {
+        if (!hasBluetoothConnectPermission()) {
+            _events.update { it + "Missing BLUETOOTH_CONNECT permission" }
+            return
+        }
+        server.sendMotorsVelocity(ty, motorNum, value)
+    }
+
+    fun sendMotorPosition(ty : Int, motorNum: Int, value: Float) {
+        if (!hasBluetoothConnectPermission()) {
+            _events.update { it + "Missing BLUETOOTH_CONNECT permission" }
+            return
+        }
+        server.sendMotorPosition(ty, motorNum, value)
+    }
+
+
+    fun sendNotificationSpecialCommand(ty : Int) {
+        if (!hasBluetoothConnectPermission()) {
+            _events.update { it + "Missing BLUETOOTH_CONNECT permission" }
+            return
+        }
+        server.sendNotificationSpecialCommand(ty)
+    }
+    fun sendNewMotorPos(motorNum : Int, value: Float) {
+        setMotorAbsPos(motorNum, value.toInt())
+        sendNotification(1)
+    }
+    /////// Make it here to send the packet for new motor position to the client
+    fun sendVelocityChanged(value: Float) {
+        setMotorAbsPos(0, value.toInt())
+        sendNotification(1)
+    }
     fun subscribe() = server.subscribe()
     fun disconnect() = server.disconnect()
     fun setMotorsPos() = server.setMotorsPos()
@@ -97,14 +131,6 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         server.setMotorPos(index, iPos)
         displayStatus()
     }
-//    fun setMotorPos(index: Int, iPos: Int){
-//        server.setMotorPos(index, iPos)
-//        displayStatus()
-//    }
-//    fun setMotorPos(index: Int, iPos: Int){
-//        server.setMotorPos(index, iPos)
-//        displayStatus()
-//    }
     fun setMotor(index: Int){
         server.setMotor(index)
         displayStatus()

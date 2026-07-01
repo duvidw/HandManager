@@ -112,9 +112,12 @@ class NimbleServer(private val context: Context) {
                                             // index: 2 - motor 1 nn move encoder count
                                             // indexed: 3,4; 5,6; 7,8 as above for motors 2,3,4
 
+    val motorsPacket = ByteArray(8) {0}  // index:0 241
+
+
     var movementType: Byte = 0;
 
-    var motorAbsPosVals = IntArray(4) { 0}
+    var motorAbsPosVals = IntArray(5) { 0}
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun start(context: Context) {
@@ -195,8 +198,185 @@ class NimbleServer(private val context: Context) {
             }
         }
     }
+    // Make this function suite to all enumatated commands in enum class CommandToHand
+    fun sendMotorsVelocity(ty : Int, motorNum: Int, value: Float) {
+        var msgConnect = "  "
+        var connectionOK = true
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+        if (connectedDevice == null) {
+            connectionOK = false
+            msgConnect = "* "
+        }
+        var msgText = ""
 
+        if (ty == CommandToHand.VELOCITY.value) {
+            msgText = "Velcity"
+            motorsPacket[0] = CommandToHand.VELOCITY.value.toByte()
+            motorsPacket[1] = motorNum.toByte()
+            motorsPacket[2] = value.toInt().toByte()
+        } else {
+            msgText = "Command: Not motor velocity: $ty"
+        }
+        msgText = msgConnect + msgText + ": " + motorsPacket.joinToString(separator = ", ") { it.toString() }
+        onEvent(msgText)
+
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+        if (!connectionOK) {
+            return  // onEvent("No device connected")} // no need event
+        }
+        val device = connectedDevice ?: return onEvent("No device connected")
+
+        val characteristic = gattServer
+            ?.getService(serviceUUID)
+            ?.getCharacteristic(charUUID)
+
+        characteristic?.value = motorsPacket
+        notifyCharacteristic(device, characteristic)
+
+    }
+    fun sendMotorPosition(ty : Int, motorNum: Int, value: Float) {
+        var msgConnect = "  "
+        var connectionOK = true
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+        if (connectedDevice == null) {
+            connectionOK = false
+            msgConnect = "* "
+        }
+        var msgText = ""
+
+        if (ty == CommandToHand.POSITION.value) {
+            msgText = "Position"
+            motorsPacket[0] = CommandToHand.POSITION.value.toByte()
+            motorsPacket[1] = motorNum.toByte()
+            motorsPacket[2] = value.toInt().toByte()
+        } else {
+            msgText = "Command: Not motor position: $ty"
+        }
+        msgText = msgConnect + msgText + ": " + motorsPacket.joinToString(separator = ", ") { it.toString() }
+        onEvent(msgText)
+
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+        if (!connectionOK) {
+            return  // onEvent("No device connected")} // no need event
+        }
+        val device = connectedDevice ?: return onEvent("No device connected")
+
+        val characteristic = gattServer
+            ?.getService(serviceUUID)
+            ?.getCharacteristic(charUUID)
+
+        characteristic?.value = motorsPacket
+        notifyCharacteristic(device, characteristic)
+
+    }
     fun sendNotification(ty : Int) {
+        // Test for connection
+        var msgConnect = "  "
+        var connectionOK = true
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+        if (connectedDevice == null) {
+            connectionOK = false
+            msgConnect = "* "
+        }
+        var msgText = ""
+        when (ty) {
+            CommandToHand.CALIBRATION.value -> {
+                msgText = "Calibration"
+                motorsPacket[0] = CommandToHand.CALIBRATION.value.toByte()
+            }
+            CommandToHand.SUBSCRIBE.value -> {
+                msgText = "Subscribe"
+                motorsPacket[0] = CommandToHand.SUBSCRIBE.value.toByte()
+            }
+            CommandToHand.FORWARD.value -> {
+                msgText = "Forward"
+                motorsPacket[0] = CommandToHand.FORWARD.value.toByte()
+            }
+            CommandToHand.BACKWARD.value -> {
+                msgText = "Backward"
+                motorsPacket[0] = CommandToHand.BACKWARD.value.toByte()
+            }
+            CommandToHand.STEP.value -> {
+                msgText = "Step"
+                motorsPacket[0] = CommandToHand.STEP.value.toByte()
+            }
+            CommandToHand.STOP.value -> {
+                msgText = "Stop"
+                motorsPacket[0] = CommandToHand.STOP.value.toByte()
+            }
+            CommandToHand.POSITION.value -> {
+                msgText = "Position"
+                motorsPacket[0] = CommandToHand.POSITION.value.toByte()
+            }
+            else -> msgText = "Unknown Command"
+        }
+        msgText = msgConnect + msgText + ": " + motorsPacket.joinToString(separator = ", ") { it.toString() }
+        onEvent(msgText)
+
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+        if (!connectionOK) {
+            return  // onEvent("No device connected")} // no need event
+        }
+        val device = connectedDevice ?: return onEvent("No device connected")
+
+        val characteristic = gattServer
+            ?.getService(serviceUUID)
+            ?.getCharacteristic(charUUID)
+
+        characteristic?.value = motorsPacket
+        notifyCharacteristic(device, characteristic)
+
+    }
+    fun sendNotificationSpecialCommand(ty : Int) {
+        // Test for connection
+        var msgConnect = "  "
+        var connectionOK = true
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+        if (connectedDevice == null) {
+            connectionOK = false
+            msgConnect = "* "
+        }
+        var msgText = ""
+        if (21 <= ty && ty <= 28) {
+            msgText = "Special: $ty"
+            motorsPacket[0] = ty.toByte()
+        } else {
+            msgText = "Unknown Special Command: $ty"
+        }
+        msgText = msgConnect + msgText + ": " + motorsPacket.joinToString(separator = ", ") { it.toString() }
+        onEvent(msgText)
+
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+        if (!connectionOK) {
+            return  // onEvent("No device connected")} // no need event
+        }
+        val device = connectedDevice ?: return onEvent("No device connected")
+
+        val characteristic = gattServer
+            ?.getService(serviceUUID)
+            ?.getCharacteristic(charUUID)
+
+        characteristic?.value = motorsPacket
+        notifyCharacteristic(device, characteristic)
+
+    }
+    fun sendNotification_0(ty : Int) {
         if (!hasBluetoothConnectPermission()) {
             return onEvent("Missing BLUETOOTH_CONNECT permission")
         }
