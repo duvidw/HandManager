@@ -2,6 +2,8 @@ package com.davw.handcommandserver
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults.buttonColors
 import androidx.compose.material3.LocalTextStyle
@@ -25,9 +28,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.abs
 
 //enum class CommandToHand {
 //    STOP,
@@ -48,6 +55,8 @@ import androidx.compose.ui.unit.sp
 //    POSITION,
 //    CALIBRATION
 //}
+
+val positionDelta : Float= 5.0f
 
 enum class CommandToHand(val value: Int) {
     STOP(0),
@@ -117,6 +126,239 @@ fun CustomStyledButtonRound2(
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////
+@Composable
+fun MainButsCommands(    viewModel: BleViewModel, ) {
+    //val events by viewModel.events.collectAsState()
+    Spacer(modifier = Modifier
+        .fillMaxWidth()
+        .height(10.dp)
+        .background(Color.White))
+
+    val numbers = (1..6).toList()
+
+//    val numCmnd = intArrayOf(31, 32, 33, 34, 35, 36)
+    val numCmnd = intArrayOf(CommandToHand.CALIBRATION.value,
+        CommandToHand.SUBSCRIBE.value,
+        CommandToHand.FORWARD.value,
+        CommandToHand.BACKWARD.value,
+        CommandToHand.STEP.value,
+        CommandToHand.STOP.value)
+
+    val buttonsText = arrayOf(
+        "Calibrate", "Subscribe", "Forward", "Backward",  "Step", "Stop")
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp, bottom = 2.dp, start = 10.dp, end = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(numbers) { num ->
+            Button(
+                onClick = { viewModel.sendNotification(numCmnd[num - 1]) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                val txt: String = buttonsText[num - 1]
+                Text(txt)
+            }
+        }
+    }
+    Spacer(modifier = Modifier
+        .fillMaxWidth()
+        .height(10.dp)
+        .background(Color.White))
+//    LazyColumn(
+//        modifier = Modifier
+//            //.weight(1f)
+//            .fillMaxWidth()
+//            .padding(top = 2.dp, bottom = 2.dp, start = 10.dp, end = 10.dp)
+//    ) {
+//        items(events.reversed()) { msg ->
+//            Text(msg)
+//        }
+//    }
+
+    Spacer(modifier = Modifier
+        .fillMaxWidth()
+        .height(2.dp)
+        .background(Color.Blue))
+}
+////////////////////////////////////////////////////////////////////////////
+@Composable
+fun TrackedSlider1(viewModel: BleViewModel) {
+    var sliderValue by remember { mutableStateOf(50f) }
+
+    // 1. Create an interaction source
+    val interactionSource = remember { MutableInteractionSource() }
+
+    // 2. Collect the drag interactions
+    val isDragging by interactionSource.collectIsDraggedAsState()
+
+    // 3. React to start and stop events
+    LaunchedEffect(isDragging) {
+        if (isDragging) {
+            println("Slider Event: Started touching/dragging: ${sliderValue}")
+        } else {
+            println("Slider Event: Stopped touching/released: ${sliderValue}")
+        }
+        //viewModel.sendMotorPosition(CommandToHand.POSITION.value,0, value = sliderValue)
+    }
+
+    Slider(
+        value = sliderValue,
+        valueRange = 0f..100f,
+        onValueChange = {
+            // sliderValue = it
+            println("Old Val: $sliderValue, New Val: $it, delta: ${abs(sliderValue - it)}")
+            if (abs(sliderValue - it) >= positionDelta) {
+                sliderValue = it
+                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 0, value = sliderValue)
+                println("Slider val: $sliderValue")
+
+            }
+                        },
+        interactionSource = interactionSource // Pass it here
+    )
+}
+@Composable
+fun TrackedSlider(viewModel: BleViewModel) {
+    var sliderValue by remember { mutableStateOf(50f) }
+
+    // 1. Create an interaction source
+    val interactionSource = remember { MutableInteractionSource() }
+
+    // 2. Collect the drag interactions
+    val isDragging by interactionSource.collectIsDraggedAsState()
+
+    // 3. React to start and stop events
+    LaunchedEffect(isDragging) {
+        if (isDragging) {
+            println("Slider Event: Started touching/dragging: ${sliderValue}")
+        } else {
+            println("Slider Event: Stopped touching/released: ${sliderValue}")
+        }
+        //viewModel.sendMotorPosition(CommandToHand.POSITION.value,0, value = sliderValue)
+    }
+
+    Slider(
+        value = sliderValue,
+        valueRange = 0f..100f,
+        onValueChange = {
+            // sliderValue = it
+            println("Old Val: $sliderValue, New Val: $it, delta: ${abs(sliderValue - it)}")
+            if (abs(sliderValue - it) >= positionDelta) {
+                sliderValue = it
+                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 0, value = sliderValue)
+                println("Slider val: $sliderValue")
+
+            }
+        },
+        interactionSource = interactionSource // Pass it here
+    )
+}
+/////////////////////////////////////////////////////////////////////////////
+@Composable
+fun TrackedSlider(
+    id: Int,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    onDragStatusChange: (Boolean, Float) -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isDragging by interactionSource.collectIsDraggedAsState()
+
+    // Track drag start/stop events
+    LaunchedEffect(isDragging) {
+        onDragStatusChange(isDragging, value)
+    }
+
+    Slider(
+        value = value,
+        valueRange = 0f..100f,
+        onValueChange = { newValue ->
+            if (abs(value - newValue) >= positionDelta) {
+                onValueChange(newValue)
+            }
+        },
+        interactionSource = interactionSource
+    )
+}
+@Composable
+fun MotorControlScreen(viewModel: BleViewModel) {
+    // Local state for 4 sliders (Initial value 50f each)
+    // Note: If your ViewModel already tracks these values, use those instead!
+    val sliderValues = remember { mutableStateListOf(50f, 50f, 50f, 50f) }
+
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        sliderValues.forEachIndexed { index, currentValue ->
+            Column {
+                Text(text = "Motor ${index + 1}: ${currentValue.toInt()}%")
+
+                TrackedSlider(
+                    id = index,
+                    value = currentValue,
+                    onValueChange = { newValue ->
+                        sliderValues[index] = newValue
+                        // Sends the specific motor index (0, 1, 2, or 3) to your BLE device
+                        viewModel.sendMotorPosition(CommandToHand.POSITION.value, index, value = newValue)
+                        println("Motor $index changed to: $newValue")
+                    },
+                    onDragStatusChange = { isDragging, value ->
+                        if (isDragging) {
+                            println("Motor $index started dragging at: $value")
+                        } else {
+                            println("Motor $index released at: $value")
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+@Composable
+fun MotorControlScreenRow(viewModel: BleViewModel) {
+    // Local state for 4 sliders (Initial value 50f each)
+    // Note: If your ViewModel already tracks these values, use those instead!
+    val sliderValues = remember { mutableStateListOf(50f, 50f, 50f, 50f) }
+
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        sliderValues.forEachIndexed { index, currentValue ->
+            Row {
+                Text(text = "Motor ${index + 1}: ${currentValue.toInt()}%")
+
+                TrackedSlider(
+                    id = index,
+                    value = currentValue,
+                    onValueChange = { newValue ->
+                        sliderValues[index] = newValue
+                        // Sends the specific motor index (0, 1, 2, or 3) to your BLE device
+                        viewModel.sendMotorPosition(CommandToHand.POSITION.value, index, value = newValue)
+                        println("Motor $index changed to: $newValue")
+                    },
+                    onDragStatusChange = { isDragging, value ->
+                        if (isDragging) {
+                            println("Motor $index started dragging at: $value")
+                        } else {
+                            println("Motor $index released at: $value")
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+////////////////////////////////////////////////////////////////////////////
 @Composable
 fun BleScreen(
     viewModel: BleViewModel,
@@ -130,12 +372,13 @@ fun BleScreen(
     var slider2 by remember { mutableFloatStateOf(50f) }
     var slider3 by remember { mutableFloatStateOf(50f) }
     var slider4 by remember { mutableFloatStateOf(50f) }
-
 //    Spacer(Modifier.fillMaxWidth().height(15.dp).background(Color.Red))
 
     Column(
             //.padding(16.dp)
-        modifier = Modifier.fillMaxSize().safeDrawingPadding()
+        modifier = Modifier
+            .fillMaxSize()
+            .safeDrawingPadding()
     )
     {
         Text(
@@ -144,80 +387,53 @@ fun BleScreen(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(), //.border(1.dp, Color.Blue).padding(8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            CustomStyledButtonRound(
-                text = "Calibrate",
-                onClick = { viewModel.sendNotification(CommandToHand.CALIBRATION.value) }
-            )
-            CustomStyledButtonRound(
-                text = "Subscribe",
-                onClick = { viewModel.sendNotification(CommandToHand.SUBSCRIBE.value) }
-            )
+        MainButsCommands(viewModel)
 
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+        Spacer(modifier = Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .background(Color.Green))
+        //TrackedSlider(viewModel)
+        MotorControlScreenRow(viewModel)
 
-        )
-        {
-            CustomStyledButtonRound(
-                text = "Forward",
-                onClick = { viewModel.sendNotification(CommandToHand.FORWARD.value) }
-            )
-            CustomStyledButtonRound(
-                text = "Backward",
-                onClick = { viewModel.sendNotification(CommandToHand.BACKWARD.value) }
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            CustomStyledButtonRound(
-                text = "Step",
-                onClick = { viewModel.sendNotification(CommandToHand.STEP.value) }
-            )
-            CustomStyledButtonRound(
-                text = "Stop",
-                onClick = { viewModel.sendNotification(CommandToHand.STOP.value) }
-            )
-        }
-        Spacer(modifier = Modifier.fillMaxWidth().height(10.dp).background(Color.White))
+        Spacer(modifier = Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .background(Color.Blue))
 
-        SliderRow(
-            viewModel,
-            value0 = slider0,
-            value1 = slider1,
-            value2 = slider2,
-            value3 = slider3,
-            value4 = slider4,
-            onValue0Change = {
-                slider0 = it
-                viewModel.sendMotorsVelocity(CommandToHand.VELOCITY.value,0, value = it)
-            },
-            onValue1Change = {
-                slider1 = it
-                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 0, value = it)
-            },
-            onValue2Change = {
-                slider2 = it
-                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 1, it)
-            },
-            onValue3Change = {
-                slider3 = it
-                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 2, it)
-            },
-            onValue4Change = {
-                slider4 = it
-                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 3, it)
-            }
-
-        )
-        Spacer(modifier = Modifier.fillMaxWidth().height(10.dp).background(Color.White))
+//        SliderRow(
+//            viewModel,
+//            value0 = slider0,
+//            value1 = slider1,
+//            value2 = slider2,
+//            value3 = slider3,
+//            value4 = slider4,
+//            onValue0Change = {
+//                slider0 = it
+//                viewModel.sendMotorsVelocity(CommandToHand.VELOCITY.value,0, value = it)
+//            },
+//            onValue1Change = {
+//                slider1 = it
+//                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 0, value = it)
+//            },
+//            onValue2Change = {
+//                slider2 = it
+//                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 1, it)
+//            },
+//            onValue3Change = {
+//                slider3 = it
+//                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 2, it)
+//            },
+//            onValue4Change = {
+//                slider4 = it
+//                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 3, it)
+//            }
+//
+//        )
+        Spacer(modifier = Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .background(Color.White))
 
         val numbers = (1..8).toList()
 
@@ -246,7 +462,10 @@ fun BleScreen(
                 }
             }
         }
-        Spacer(modifier = Modifier.fillMaxWidth().height(10.dp).background(Color.White))
+        Spacer(modifier = Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .background(Color.White))
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
@@ -258,30 +477,36 @@ fun BleScreen(
             }
         }
 
-        Spacer(modifier = Modifier.fillMaxWidth().height(2.dp).background(Color.White))
+        Spacer(modifier = Modifier
+            .fillMaxWidth()
+            .height(2.dp)
+            .background(Color.White))
 
         Row(
             modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 2.dp, bottom = 2.dp, start = 10.dp, end = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                .fillMaxWidth()
+                .padding(top = 8.dp), //2.dp, bottom = 2.dp, start = 10.dp, end = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween //spacedBy(2.dp)
         ) {
             Button(
                 onClick = { },
                 enabled = false,
-                modifier = Modifier.fillMaxWidth(0.5f)
+                //modifier = Modifier.fillMaxWidth(0.5f)
             ) {
                 Text("Prev")
             }
 
             Button(
                 onClick = onNextScreen,
-                modifier = Modifier.fillMaxWidth(0.5f)
+                //modifier = Modifier.fillMaxWidth(0.5f)
             ) {
                 Text("Next")
             }
         }
-        Spacer(modifier = Modifier.fillMaxWidth().height(2.dp).background(Color.White))
+        Spacer(modifier = Modifier
+            .fillMaxWidth()
+            .height(2.dp)
+            .background(Color.White))
     }
 }
 // TBD1
@@ -305,13 +530,103 @@ fun SliderRow(
             .height(250.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Spacer(Modifier.fillMaxWidth().height(4.dp).background(Color.White))
-        SliderWithValue_1(viewModel, 0, "V", value = value0, onValue0Change)
-        Spacer(Modifier.fillMaxWidth().height(10.dp).background(Color.White))
-        SliderWithValue_1(viewModel, 1, "M1", value = value1, onValue1Change)
-        SliderWithValue_1(viewModel, 2, "M2", value = value2, onValue2Change)
-        SliderWithValue_1(viewModel, 3, "M3", value = value3, onValue3Change)
-        SliderWithValue_1(viewModel, 4, "M4", value = value4, onValue4Change)
+        Spacer(Modifier
+            .fillMaxWidth()
+            .height(4.dp)
+            .background(Color.White))
+        SliderWithValue(viewModel, 0, "V", value = value0, onValue0Change)
+        Spacer(Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .background(Color.White))
+        SliderWithValue(viewModel, 1, "M1", value = value1, onValue1Change)
+        SliderWithValue(viewModel, 2, "M2", value = value2, onValue2Change)
+        SliderWithValue(viewModel, 3, "M3", value = value3, onValue3Change)
+        SliderWithValue(viewModel, 4, "M4", value = value4, onValue4Change)
+    }
+}
+//@Composable
+//fun SliderWithValue(
+//    viewModel: BleViewModel,
+//    index: Int,
+//    name: String,
+//    value: Float,
+//    onValueChange: (Float) -> Unit,
+//    modifier: Modifier = Modifier,
+//    interactionSource: InteractionSource = remember { MutableInteractionSource() } // Create a new interaction source
+//) {
+//    Row(
+//        modifier = modifier
+//            .fillMaxWidth()
+//            .height(50.dp),
+//        horizontalArrangement = Arrangement.SpaceBetween,
+//        verticalAlignment = Alignment.CenterVertically
+//    ) {
+//        Text(
+//            text = name,
+//            modifier = Modifier.padding(start = 8.dp)
+//        )
+//        Slider(
+//            value = value,
+//            onValueChange =  onValueChange {
+//                println("Slider val: $value")
+//            },
+//            interactionSource = interactionSource // Pass it here
+//        )
+//
+//
+//
+////        Slider(
+////            value = value,
+////            onValueChange = onValueChange,
+////            valueRange = 0f..100f,
+////            modifier = Modifier
+////                .weight(2f)
+////                .height(50.dp),
+////            enabled = viewModel.updateSlider(index, value)
+////        )
+//
+//        Text(
+//            text = viewModel.getSlider(index).toString(),
+//            modifier = Modifier.padding(start = 12.dp)
+//        )
+//
+//    }
+//}
+
+@Composable
+fun SliderRow1(
+    viewModel: BleViewModel,
+    value0: Float,
+    value1: Float,
+    value2: Float,
+    value3: Float,
+    value4: Float,
+    onValue0Change: (Float) -> Unit,
+    onValue1Change: (Float) -> Unit,
+    onValue2Change: (Float) -> Unit,
+    onValue3Change: (Float) -> Unit,
+    onValue4Change: (Float) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(250.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Spacer(Modifier
+            .fillMaxWidth()
+            .height(4.dp)
+            .background(Color.White))
+        SliderWithValue(viewModel, 0, "V", value = value0, onValue0Change)
+        Spacer(Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .background(Color.White))
+        SliderWithValue(viewModel, 1, "M1", value = value1, onValue1Change)
+        SliderWithValue(viewModel, 2, "M2", value = value2, onValue2Change)
+        SliderWithValue(viewModel, 3, "M3", value = value3, onValue3Change)
+        SliderWithValue(viewModel, 4, "M4", value = value4, onValue4Change)
     }
 }
 
@@ -327,68 +642,13 @@ fun SliderWithValue(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(25.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        CustomStyledButtonRound2("<", { viewModel.sendIntCommand(21, index) })
-
-        Text(
-            text = name,
-            modifier = Modifier
-                .padding(start = 12.dp)
-                .weight(0.5f)
-                .height(25.dp),
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = 0f..100f,
-            modifier = Modifier
-                .weight(2f)
-                .height(25.dp),
-            enabled = viewModel.updateSlider(index, value)
-        )
-
-        Text(
-            text = viewModel.getSlider(index).toString(),
-            modifier = Modifier
-                .padding(start = 12.dp)
-                .weight(0.5f)
-                .height(25.dp),
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        CustomStyledButtonRound2(">", { viewModel.sendIntCommand(22, index) })
-    }
-}
-@Composable
-fun SliderWithValue_1(
-    viewModel: BleViewModel,
-    index: Int,
-    name: String,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
             .height(50.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-   //     CustomStyledButtonRound2("<", { viewModel.sendIntCommand(21, index) })
-
         Text(
             text = name,
-            modifier = Modifier
-                .padding(start = 12.dp)
-                .weight(0.5f)
-                .height(50.dp),
-            style = MaterialTheme.typography.bodyLarge
+            modifier = Modifier.padding(start = 8.dp)
         )
 
         Slider(
@@ -403,13 +663,8 @@ fun SliderWithValue_1(
 
         Text(
             text = viewModel.getSlider(index).toString(),
-            modifier = Modifier
-                .padding(start = 12.dp)
-                .weight(0.5f)
-                .height(50.dp),
-            style = MaterialTheme.typography.bodyLarge
+            modifier = Modifier.padding(start = 12.dp)
         )
 
-  //      CustomStyledButtonRound2(">", { viewModel.sendIntCommand(22, index) })
     }
 }
