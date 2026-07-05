@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.paddingFrom
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -225,49 +226,50 @@ fun TrackedSlider1(viewModel: BleViewModel) {
         interactionSource = interactionSource // Pass it here
     )
 }
-@Composable
-fun TrackedSlider(viewModel: BleViewModel) {
-    var sliderValue by remember { mutableStateOf(50f) }
-
-    // 1. Create an interaction source
-    val interactionSource = remember { MutableInteractionSource() }
-
-    // 2. Collect the drag interactions
-    val isDragging by interactionSource.collectIsDraggedAsState()
-
-    // 3. React to start and stop events
-    LaunchedEffect(isDragging) {
-        if (isDragging) {
-            println("Slider Event: Started touching/dragging: ${sliderValue}")
-        } else {
-            println("Slider Event: Stopped touching/released: ${sliderValue}")
-        }
-        //viewModel.sendMotorPosition(CommandToHand.POSITION.value,0, value = sliderValue)
-    }
-
-    Slider(
-        value = sliderValue,
-        valueRange = 0f..100f,
-        onValueChange = {
-            // sliderValue = it
-            println("Old Val: $sliderValue, New Val: $it, delta: ${abs(sliderValue - it)}")
-            if (abs(sliderValue - it) >= positionDelta) {
-                sliderValue = it
-                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 0, value = sliderValue)
-                println("Slider val: $sliderValue")
-
-            }
-        },
-        interactionSource = interactionSource // Pass it here
-    )
-}
+//@Composable
+//fun TrackedSlider(viewModel: BleViewModel) {
+//    var sliderValue by remember { mutableStateOf(50f) }
+//
+//    // 1. Create an interaction source
+//    val interactionSource = remember { MutableInteractionSource() }
+//
+//    // 2. Collect the drag interactions
+//    val isDragging by interactionSource.collectIsDraggedAsState()
+//
+//    // 3. React to start and stop events
+//    LaunchedEffect(isDragging) {
+//        if (isDragging) {
+//            println("Slider Event: Started touching/dragging: ${sliderValue}")
+//        } else {
+//            println("Slider Event: Stopped touching/released: ${sliderValue}")
+//        }
+//        //viewModel.sendMotorPosition(CommandToHand.POSITION.value,0, value = sliderValue)
+//    }
+//
+//    Slider(
+//        value = sliderValue,
+//        valueRange = 0f..100f,
+//        onValueChange = {
+//            // sliderValue = it
+//            println("Old Val: $sliderValue, New Val: $it, delta: ${abs(sliderValue - it)}")
+//            if (abs(sliderValue - it) >= positionDelta) {
+//                sliderValue = it
+//                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 0, value = sliderValue)
+//                println("Slider val: $sliderValue")
+//
+//            }
+//        },
+//        interactionSource = interactionSource // Pass it here
+//    )
+//}
 /////////////////////////////////////////////////////////////////////////////
 @Composable
 fun TrackedSlider(
     id: Int,
     value: Float,
     onValueChange: (Float) -> Unit,
-    onDragStatusChange: (Boolean, Float) -> Unit
+    onDragStatusChange: (Boolean, Float) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isDragging by interactionSource.collectIsDraggedAsState()
@@ -289,71 +291,78 @@ fun TrackedSlider(
     )
 }
 @Composable
-fun MotorControlScreen(viewModel: BleViewModel) {
-    // Local state for 4 sliders (Initial value 50f each)
-    // Note: If your ViewModel already tracks these values, use those instead!
-    val sliderValues = remember { mutableStateListOf(50f, 50f, 50f, 50f) }
-
-    Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        sliderValues.forEachIndexed { index, currentValue ->
-            Column {
-                Text(text = "Motor ${index + 1}: ${currentValue.toInt()}%")
-
-                TrackedSlider(
-                    id = index,
-                    value = currentValue,
-                    onValueChange = { newValue ->
-                        sliderValues[index] = newValue
-                        // Sends the specific motor index (0, 1, 2, or 3) to your BLE device
-                        viewModel.sendMotorPosition(CommandToHand.POSITION.value, index, value = newValue)
-                        println("Motor $index changed to: $newValue")
-                    },
-                    onDragStatusChange = { isDragging, value ->
-                        if (isDragging) {
-                            println("Motor $index started dragging at: $value")
-                        } else {
-                            println("Motor $index released at: $value")
-                        }
-                    }
-                )
-            }
-        }
-    }
-}
-@Composable
 fun MotorControlScreenRow(viewModel: BleViewModel) {
     // Local state for 4 sliders (Initial value 50f each)
     // Note: If your ViewModel already tracks these values, use those instead!
-    val sliderValues = remember { mutableStateListOf(50f, 50f, 50f, 50f) }
+    val sliderValues = remember { mutableStateListOf(50f, 50f, 50f, 50f, 50f) }
 
     Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier.padding(8.dp),
+        //verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         sliderValues.forEachIndexed { index, currentValue ->
-            Row {
-                Text(text = "Motor ${index + 1}: ${currentValue.toInt()}%")
-
-                TrackedSlider(
-                    id = index,
-                    value = currentValue,
-                    onValueChange = { newValue ->
-                        sliderValues[index] = newValue
-                        // Sends the specific motor index (0, 1, 2, or 3) to your BLE device
-                        viewModel.sendMotorPosition(CommandToHand.POSITION.value, index, value = newValue)
-                        println("Motor $index changed to: $newValue")
-                    },
-                    onDragStatusChange = { isDragging, value ->
-                        if (isDragging) {
-                            println("Motor $index started dragging at: $value")
-                        } else {
-                            println("Motor $index released at: $value")
+            Row (
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically // 1. Vertically centers text and slider
+            ){
+                if (index == 0) {
+                    Text(
+                        text = "V${index}: ${currentValue.toInt()}",
+                        //modifier = Modifier.padding(start = 8.dp).
+                        modifier = Modifier.width(65.dp)
+                    )
+                    TrackedSlider(
+                        id = index,
+                        value = currentValue,
+                        modifier = Modifier.weight(1f),
+                        onValueChange = { newValue ->
+                            sliderValues[index] = newValue
+                            // Sends the specific motor index (0, 1, 2, 3, or 4) to your BLE device
+                            viewModel.sendMotorsVelocity(
+                                CommandToHand.VELOCITY.value,
+                                index,
+                                value = newValue
+                            )
+                            println("Motor $index changed to: $newValue")
+                        },
+                        onDragStatusChange = { isDragging, value ->
+                            if (isDragging) {
+                                println("Motor $index started dragging at: $value")
+                            } else {
+                                println("Motor $index released at: $value")
+                            }
                         }
-                    }
-                )
+                    )
+
+                } else {
+
+                    Text(
+                        text = "M${index }: ${currentValue.toInt()}",
+                        //modifier = Modifier.padding(start = 8.dp)
+                    )
+
+                    TrackedSlider(
+                        id = index,
+                        value = currentValue,
+                        onValueChange = { newValue ->
+                            sliderValues[index] = newValue
+                            // Sends the specific motor index (0, 1, 2, or 3) to your BLE device
+                            viewModel.sendMotorPosition(
+                                CommandToHand.POSITION.value,
+                                index,
+                                value = newValue
+                            )
+                            println("Motor $index changed to: $newValue")
+                        },
+                        onDragStatusChange = { isDragging, value ->
+                            if (isDragging) {
+                                println("Motor $index started dragging at: $value")
+                            } else {
+                                println("Motor $index released at: $value")
+                            }
+                        }
+                    )
+                }
             }
         }
     }
