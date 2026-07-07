@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -49,9 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 
-val positionDelta : Float= 5.0f
+const val positionDelta : Float= 5.0f
 
 enum class CommandToHand(val value: Int) {
     STOP(0),
@@ -123,7 +121,7 @@ fun CustomStyledButtonRound2(
 
 /////////////////////////////////////////////////////////////////////////////
 @Composable
-fun MainButsCommands(    viewModel: BleViewModel, ) {
+fun MainButsCommands(viewModel: BleViewModel) {
     //val events by viewModel.events.collectAsState()
     Spacer(modifier = Modifier
         .fillMaxWidth()
@@ -132,8 +130,8 @@ fun MainButsCommands(    viewModel: BleViewModel, ) {
 
     val numbers = (1..6).toList()
 
-//    val numCmnd = intArrayOf(31, 32, 33, 34, 35, 36)
-    val numCmnd = intArrayOf(CommandToHand.CALIBRATION.value,
+//    val numCmd = intArrayOf(31, 32, 33, 34, 35, 36)
+    val numCmd = intArrayOf(CommandToHand.CALIBRATION.value,
         CommandToHand.SUBSCRIBE.value,
         CommandToHand.FORWARD.value,
         CommandToHand.BACKWARD.value,
@@ -153,7 +151,7 @@ fun MainButsCommands(    viewModel: BleViewModel, ) {
     ) {
         items(numbers) { num ->
             Button(
-                onClick = { viewModel.sendNotification(numCmnd[num - 1]) },
+                onClick = { viewModel.sendNotification(numCmd[num - 1]) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
@@ -339,38 +337,6 @@ fun TrackedSliderVelocity(
 }
 
 @Composable
-fun TrackedSliderVelocity0(
-    id: Int,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    onDragStatusChange: (Boolean, Float) -> Unit, // Expects (Boolean, Float)
-    modifier: Modifier = Modifier
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-
-    LaunchedEffect(interactionSource) {
-        interactionSource.interactions.collect { interaction ->
-            when (interaction) {
-                // FIXED: Passed the current 'value' as the second parameter
-                is DragInteraction.Start -> onDragStatusChange(true, value)
-                is DragInteraction.Stop, is DragInteraction.Cancel -> onDragStatusChange(false, value)
-            }
-        }
-    }
-
-    Slider(
-        value = value,
-        valueRange = 0f..100f,
-        onValueChange = { newValue ->
-            if (abs(value - newValue) >= positionDelta) {
-                onValueChange(newValue)
-            }
-        },
-        interactionSource = interactionSource,
-        modifier = modifier
-    )
-}
-@Composable
 fun TrackedSlider1(
     id: Int,
     value: Float,
@@ -405,7 +371,6 @@ fun MotorControlScreenRow(viewModel: BleViewModel) {
 
     Column(
         modifier = Modifier.padding(8.dp),
-        //verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         sliderValues.forEachIndexed { index, currentValue ->
             Row (
@@ -413,32 +378,11 @@ fun MotorControlScreenRow(viewModel: BleViewModel) {
                 verticalAlignment = Alignment.CenterVertically // 1. Vertically centers text and slider
             ){
                 if (index == 0) {
-//                    Text(
-//                        text = "V${index}: ${currentValue.toInt()}",
-//                        //modifier = Modifier.padding(start = 8.dp).
-//                        modifier = Modifier.width(65.dp)
-//                    )
-//                    TrackedSlideVel(
-//                        id = index,
-//                        value = currentValue,
-//                        modifier = Modifier.weight(1f),
-//                        releasedAt = { releasedValue ->
-//                            sliderValues[index] = releasedValue
-//                            //println("Motor $index released at: $releasedValue")
-//                            viewModel.sendMotorsVelocity(
-//                                CommandToHand.VELOCITY.value,
-//                                index,
-//                                value = releasedValue
-//                            )
-//                            println("Velocity $index released at: $releasedValue")
-//                        }
-//                    )
-
+                    println("Place for Slider 0")
                 } else {
 
                     Text(
                         text = "M${index }: ${currentValue.toInt()}",
-                        //modifier = Modifier.padding(start = 8.dp)
                     )
 
                     TrackedSlide(
@@ -553,9 +497,8 @@ fun CustomActionSliderRow(
     ) {
         // Displays the changing value in real-time while moving
         Text(
-            //text = "V: ${"%.1f".format(sliderValue)}",
             text = "V: ${sliderValue.toInt()}",
-            modifier = Modifier.width(65.dp)
+//            modifier = Modifier.width(65.dp)
             //fontSize = 16.sp
         )
 
@@ -628,25 +571,11 @@ fun BleScreen(
                     0,
                     endValue
                 )
-//                viewModel.sendMotorsVelocity(
-//                                CommandToHand.VELOCITY.value,
-//                                index,
-//                                value = releasedValue
-//                            )
-//
             }
         )
-//        Spacer(modifier = Modifier
-//            .fillMaxWidth()
-//            .height(10.dp)
-//            .background(Color.Green))
         //TrackedSlider(viewModel)
         MotorControlScreenRow(viewModel)
 
-//        Spacer(modifier = Modifier
-//            .fillMaxWidth()
-//            .height(10.dp)
-//            .background(Color.Blue))
 
         Spacer(modifier = Modifier
             .fillMaxWidth()
@@ -655,7 +584,7 @@ fun BleScreen(
 
         val numbers = (1..8).toList()
 
-        val numCmnd = intArrayOf(21, 22, 23, 24, 25, 26, 27, 28)
+        val numCmd = intArrayOf(21, 22, 23, 24, 25, 26, 27, 28)
         val buttonsText = arrayOf(
             "1", "2", "3", "4",
             "5", "6", "7", "8"
@@ -670,7 +599,7 @@ fun BleScreen(
         ) {
             items(numbers) { num ->
                 Button(
-                    onClick = { viewModel.sendNotificationSpecialCommand(numCmnd[num - 1]) },
+                    onClick = { viewModel.sendNotificationSpecialCommand(numCmd[num - 1]) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
@@ -713,17 +642,12 @@ fun BleScreen(
             ) {
                 Text("Prev")
             }
-///
-///            ExitButtonApp()
-///
             Button(onClick = {
                 // Cast context to Activity and call finishAndRemoveTask
                 (context as? Activity)?.finishAndRemoveTask()
             }) {
                 Text(text = "Exit App")
             }
-///
-
             Button(
                 onClick = onNextScreen,
                 //modifier = Modifier.fillMaxWidth(0.5f)

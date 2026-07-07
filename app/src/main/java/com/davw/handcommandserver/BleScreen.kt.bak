@@ -223,7 +223,7 @@ fun BleScreen(
 
         val numbers = (1..12).toList()
 
-        val numCmnd = intArrayOf(1, 2, 3, 4, 0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
+        val numCmd = intArrayOf(1, 2, 3, 4, 0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
         val buttonsText = arrayOf(
             "1", "2", "3", "4",
             "0", "5", "6", "7",
@@ -240,7 +240,7 @@ fun BleScreen(
         ) {
             items(numbers) { num ->
                 Button(
-                    onClick = { viewModel.sendIntCommandPos(numCmnd[num - 1]) },
+                    onClick = { viewModel.sendIntCommandPos(numCmd[num - 1]) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
