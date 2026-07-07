@@ -6,10 +6,7 @@ import android.app.Application
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresPermission
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
@@ -29,7 +26,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _events = MutableStateFlow<List<String>>(emptyList())
     val events = _events.asStateFlow()
-    var selectedCommand by mutableStateOf<Int?>(null)
+    //var selectedCommand by mutableStateOf<Int?>(null)
     val directCommands = mutableStateListOf<DirectCommandConfig>().apply {
         addAll(loadInitialDirectCommands())
     }
@@ -38,7 +35,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     // 4 sliders, initial value = 50f
     val _sliders = MutableStateFlow(FloatArray(5) { 50f })
-    val sliders = _sliders
+    //val sliders = _sliders
 
     fun updateSlider(index: Int, value: Float): Boolean{
         val newArray = _sliders.value.clone()
@@ -49,7 +46,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun getSlider(index: Int): Float {
         return server.motorAbsPosVals[index].toFloat()
-        ;return (_sliders.value[index])
+        //return (_sliders.value[index])
     }
 
     //private val _commandStatus = MutableStateFlow("System Ready")
@@ -123,18 +120,18 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         setMotorAbsPos(0, value.toInt())
         sendNotification(1)
     }
-    fun subscribe() = server.subscribe()
-    fun disconnect() = server.disconnect()
-    fun setMotorsPos() = server.setMotorsPos()
+    //fun subscribe() = server.subscribe()
+    //fun disconnect() = server.disconnect()
+    //fun setMotorsPos() = server.setMotorsPos()
 //    fun sendCommand(command: Byte) = server.sendCommand(command)
-    fun setMotorPos(index: Int, iPos: Int){
-        server.setMotorPos(index, iPos)
-        displayStatus()
-    }
-    fun setMotor(index: Int){
-        server.setMotor(index)
-        displayStatus()
-    }
+//    fun setMotorPos(index: Int, iPos: Int){
+//        server.setMotorPos(index, iPos)
+//        displayStatus()
+//    }
+//    fun setMotor(index: Int){
+//        server.setMotor(index)
+//        displayStatus()
+//    }
     fun setMotorAbsPos(index: Int, iPos : Int)
     {
         server.motorAbsPosVals[index] = iPos

@@ -1,8 +1,13 @@
+@file:Suppress("unused", "RedundantQualifierName")
+
 package com.davw.handcommandserver
 
+import android.app.Activity
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.paddingFrom
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,9 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults.buttonColors
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -34,28 +36,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
-
-//enum class CommandToHand {
-//    STOP,
-//    FORWARD,
-//    BACKWARD,
-//    CLOCKWISE,
-//    COUNTER_CLOCKWISE,
-//    STEP,
-//    POSITION,
-//    CALIBRATION
-//}
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 val positionDelta : Float= 5.0f
 
@@ -173,16 +167,6 @@ fun MainButsCommands(    viewModel: BleViewModel, ) {
         .fillMaxWidth()
         .height(10.dp)
         .background(Color.White))
-//    LazyColumn(
-//        modifier = Modifier
-//            //.weight(1f)
-//            .fillMaxWidth()
-//            .padding(top = 2.dp, bottom = 2.dp, start = 10.dp, end = 10.dp)
-//    ) {
-//        items(events.reversed()) { msg ->
-//            Text(msg)
-//        }
-//    }
 
     Spacer(modifier = Modifier
         .fillMaxWidth()
@@ -190,81 +174,204 @@ fun MainButsCommands(    viewModel: BleViewModel, ) {
         .background(Color.Blue))
 }
 ////////////////////////////////////////////////////////////////////////////
-@Composable
-fun TrackedSlider1(viewModel: BleViewModel) {
-    var sliderValue by remember { mutableStateOf(50f) }
-
-    // 1. Create an interaction source
-    val interactionSource = remember { MutableInteractionSource() }
-
-    // 2. Collect the drag interactions
-    val isDragging by interactionSource.collectIsDraggedAsState()
-
-    // 3. React to start and stop events
-    LaunchedEffect(isDragging) {
-        if (isDragging) {
-            println("Slider Event: Started touching/dragging: ${sliderValue}")
-        } else {
-            println("Slider Event: Stopped touching/released: ${sliderValue}")
-        }
-        //viewModel.sendMotorPosition(CommandToHand.POSITION.value,0, value = sliderValue)
-    }
-
-    Slider(
-        value = sliderValue,
-        valueRange = 0f..100f,
-        onValueChange = {
-            // sliderValue = it
-            println("Old Val: $sliderValue, New Val: $it, delta: ${abs(sliderValue - it)}")
-            if (abs(sliderValue - it) >= positionDelta) {
-                sliderValue = it
-                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 0, value = sliderValue)
-                println("Slider val: $sliderValue")
-
-            }
-                        },
-        interactionSource = interactionSource // Pass it here
-    )
-}
 //@Composable
-//fun TrackedSlider(viewModel: BleViewModel) {
-//    var sliderValue by remember { mutableStateOf(50f) }
-//
-//    // 1. Create an interaction source
+//fun TrackedSlider0(
+//    id: Int,
+//    value: Float,
+//    onValueChange: (Float) -> Unit,
+//    onDragStatusChange: (Boolean, Float) -> Unit,
+//    modifier: Modifier = Modifier
+//) {
+//    var sliderValue by remember { mutableStateOf(0.5f) }
 //    val interactionSource = remember { MutableInteractionSource() }
 //
-//    // 2. Collect the drag interactions
-//    val isDragging by interactionSource.collectIsDraggedAsState()
-//
-//    // 3. React to start and stop events
-//    LaunchedEffect(isDragging) {
-//        if (isDragging) {
-//            println("Slider Event: Started touching/dragging: ${sliderValue}")
-//        } else {
-//            println("Slider Event: Stopped touching/released: ${sliderValue}")
+//    // Listen directly to raw touch/drag events
+//    LaunchedEffect(interactionSource) {
+//        interactionSource.interactions.collect { interaction ->
+//            when (interaction) {
+//                is DragInteraction.Start -> {
+//                    // Triggers exactly when the finger hits the slider thumb
+//                    println("Touch event: Slider pressed")
+//                }
+//                is DragInteraction.Stop, is DragInteraction.Cancel -> {
+//                    // Triggers exactly when the finger leaves the screen
+//                    println("Touch event: Slider released")
+//                }
+//            }
 //        }
-//        //viewModel.sendMotorPosition(CommandToHand.POSITION.value,0, value = sliderValue)
 //    }
 //
 //    Slider(
 //        value = sliderValue,
-//        valueRange = 0f..100f,
-//        onValueChange = {
-//            // sliderValue = it
-//            println("Old Val: $sliderValue, New Val: $it, delta: ${abs(sliderValue - it)}")
-//            if (abs(sliderValue - it) >= positionDelta) {
-//                sliderValue = it
-//                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 0, value = sliderValue)
-//                println("Slider val: $sliderValue")
-//
-//            }
-//        },
-//        interactionSource = interactionSource // Pass it here
+//        onValueChange = { sliderValue = it },
+//        interactionSource = interactionSource
 //    )
 //}
-/////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
 @Composable
-fun TrackedSlider(
+fun TrackedSlideVel(
+    id: Int,
+    value: Float,
+//    touchedAt: (Float) -> Unit,
+//    newValue: (Float) -> Unit,
+    releasedAt: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val latestValue by rememberUpdatedState(value)
+//    val latestTouchedAt by rememberUpdatedState(touchedAt)
+//    val latestNewValue by rememberUpdatedState(newValue)
+    val latestReleasedAt by rememberUpdatedState(releasedAt)
+
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    println("[$id] touch the slider at $latestValue")
+                    latestReleasedAt(latestValue)
+                }
+
+                is PressInteraction.Release, is PressInteraction.Cancel -> {
+                    println("[$id] release the slider at $latestValue")
+                    latestReleasedAt(latestValue)
+                }
+            }
+        }
+    }
+
+    Slider(
+        value = value,
+        valueRange = 0f..100f,
+        onValueChange = { latestReleasedAt(it)
+            println("[$id] slider velocity changed to $it")
+                        },
+
+        interactionSource = interactionSource,
+        modifier = modifier
+    )
+}
+@Composable
+fun TrackedSlide(
+    id: Int,
+    value: Float,
+    touchedAt: (Float) -> Unit,
+    newValue: (Float) -> Unit,
+    releasedAt: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val latestValue by rememberUpdatedState(value)
+    val latestTouchedAt by rememberUpdatedState(touchedAt)
+    val latestNewValue by rememberUpdatedState(newValue)
+    val latestReleasedAt by rememberUpdatedState(releasedAt)
+
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    println("[$id] touch the slider at $latestValue")
+                    latestTouchedAt(latestValue)
+                }
+
+                is PressInteraction.Release, is PressInteraction.Cancel -> {
+                    println("[$id] release the slider at $latestValue")
+                    latestReleasedAt(latestValue)
+                }
+            }
+        }
+    }
+
+    Slider(
+        value = value,
+        valueRange = 0f..100f,
+        onValueChange = { latestNewValue(it) },
+        interactionSource = interactionSource,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun TrackedSliderVelocity(
+    id: Int,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    onDragStatusChange: (Boolean, Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    println("[$id] touch the slider")
+                    onDragStatusChange(true, value)
+                }
+//                is DragInteraction.Start -> {
+//                    println("[$id] drag the slider")
+//                    onDragStatusChange(true, value)
+//                }
+                is PressInteraction.Release, is PressInteraction.Cancel -> {
+                    println("[$id] release the slider")
+                    onDragStatusChange(true, value)
+                }
+                is DragInteraction.Stop,
+                is DragInteraction.Cancel -> {
+                    println("[$id] release the slider")
+                    onDragStatusChange(true, value)
+                }
+            }
+        }
+    }
+
+    Slider(
+        value = value,
+        valueRange = 0f..100f,
+        onValueChange = { newValue ->
+            // Keep your threshold logic if needed
+            if (abs(value - newValue) >= positionDelta) {
+                onValueChange(newValue)
+            }
+        },
+        interactionSource = interactionSource,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun TrackedSliderVelocity0(
+    id: Int,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    onDragStatusChange: (Boolean, Float) -> Unit, // Expects (Boolean, Float)
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                // FIXED: Passed the current 'value' as the second parameter
+                is DragInteraction.Start -> onDragStatusChange(true, value)
+                is DragInteraction.Stop, is DragInteraction.Cancel -> onDragStatusChange(false, value)
+            }
+        }
+    }
+
+    Slider(
+        value = value,
+        valueRange = 0f..100f,
+        onValueChange = { newValue ->
+            if (abs(value - newValue) >= positionDelta) {
+                onValueChange(newValue)
+            }
+        },
+        interactionSource = interactionSource,
+        modifier = modifier
+    )
+}
+@Composable
+fun TrackedSlider1(
     id: Int,
     value: Float,
     onValueChange: (Float) -> Unit,
@@ -306,33 +413,26 @@ fun MotorControlScreenRow(viewModel: BleViewModel) {
                 verticalAlignment = Alignment.CenterVertically // 1. Vertically centers text and slider
             ){
                 if (index == 0) {
-                    Text(
-                        text = "V${index}: ${currentValue.toInt()}",
-                        //modifier = Modifier.padding(start = 8.dp).
-                        modifier = Modifier.width(65.dp)
-                    )
-                    TrackedSlider(
-                        id = index,
-                        value = currentValue,
-                        modifier = Modifier.weight(1f),
-                        onValueChange = { newValue ->
-                            sliderValues[index] = newValue
-                            // Sends the specific motor index (0, 1, 2, 3, or 4) to your BLE device
-                            viewModel.sendMotorsVelocity(
-                                CommandToHand.VELOCITY.value,
-                                index,
-                                value = newValue
-                            )
-                            println("Motor $index changed to: $newValue")
-                        },
-                        onDragStatusChange = { isDragging, value ->
-                            if (isDragging) {
-                                println("Motor $index started dragging at: $value")
-                            } else {
-                                println("Motor $index released at: $value")
-                            }
-                        }
-                    )
+//                    Text(
+//                        text = "V${index}: ${currentValue.toInt()}",
+//                        //modifier = Modifier.padding(start = 8.dp).
+//                        modifier = Modifier.width(65.dp)
+//                    )
+//                    TrackedSlideVel(
+//                        id = index,
+//                        value = currentValue,
+//                        modifier = Modifier.weight(1f),
+//                        releasedAt = { releasedValue ->
+//                            sliderValues[index] = releasedValue
+//                            //println("Motor $index released at: $releasedValue")
+//                            viewModel.sendMotorsVelocity(
+//                                CommandToHand.VELOCITY.value,
+//                                index,
+//                                value = releasedValue
+//                            )
+//                            println("Velocity $index released at: $releasedValue")
+//                        }
+//                    )
 
                 } else {
 
@@ -341,10 +441,14 @@ fun MotorControlScreenRow(viewModel: BleViewModel) {
                         //modifier = Modifier.padding(start = 8.dp)
                     )
 
-                    TrackedSlider(
+                    TrackedSlide(
                         id = index,
                         value = currentValue,
-                        onValueChange = { newValue ->
+                        modifier = Modifier.weight(1f),
+                        touchedAt = { touchedValue ->
+                            println("Motor $index started dragging at: $touchedValue")
+                        },
+                        newValue = { newValue ->
                             sliderValues[index] = newValue
                             // Sends the specific motor index (0, 1, 2, or 3) to your BLE device
                             viewModel.sendMotorPosition(
@@ -354,17 +458,133 @@ fun MotorControlScreenRow(viewModel: BleViewModel) {
                             )
                             println("Motor $index changed to: $newValue")
                         },
-                        onDragStatusChange = { isDragging, value ->
-                            if (isDragging) {
-                                println("Motor $index started dragging at: $value")
-                            } else {
-                                println("Motor $index released at: $value")
-                            }
+                        releasedAt = { releasedValue ->
+                            println("Motor $index released at: $releasedValue")
                         }
                     )
                 }
             }
         }
+    }
+}
+////////////////////////////////////////////////////////////////////////////
+@Composable
+fun ExitButtonApp() {
+    // Get the current context
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Button(onClick = {
+            // Cast context to Activity and call finishAndRemoveTask
+            (context as? Activity)?.finishAndRemoveTask()
+        }) {
+            Text(text = "Exit App")
+        }
+    }
+}
+////////////////////////////////////////////////////////////////////////////
+@Composable
+fun CustomActionSliderCOL(
+    startVal: (Float) -> Unit,
+    sliderEnded: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Local state to keep track of the slider's visual position
+    var sliderValue by remember { mutableFloatStateOf(0f) }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Displays the changing value in real-time while moving
+        Text(
+            text = "Value: ${"%.1f".format(sliderValue)}",
+            fontSize = 24.sp
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Slider(
+            value = sliderValue,
+            valueRange = 0f..100f,
+            onValueChange = { newValue ->
+                // Updates continuously while moving, displaying the changed value
+                sliderValue = newValue
+            },
+            onValueChangeFinished = {
+                // Triggered when the user leaves/releases the slider
+                sliderEnded(sliderValue)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .pointerInput(Unit) {
+                    // Detect the initial down press/click action
+                    detectTapGestures(
+                        onPress = {
+                            // This runs immediately when the user touches the slider
+                            startVal(sliderValue)
+                        }
+                    )
+                }
+        )
+    }
+}
+////////////////////////////////////////////////////////////////////////////
+@Composable
+fun CustomActionSliderRow(
+    startVal: (Float) -> Unit,
+    sliderEnded: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Local state to keep track of the slider's visual position
+    var sliderValue by remember { mutableFloatStateOf(50f) }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+       // horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Displays the changing value in real-time while moving
+        Text(
+            //text = "V: ${"%.1f".format(sliderValue)}",
+            text = "V: ${sliderValue.toInt()}",
+            modifier = Modifier.width(65.dp)
+            //fontSize = 16.sp
+        )
+
+        Slider(
+            value = sliderValue,
+            valueRange = 0f..100f,
+            onValueChange = { newValue ->
+                // Updates continuously while moving, displaying the changed value
+                sliderValue = newValue
+            },
+            onValueChangeFinished = {
+                // Triggered when the user leaves/releases the slider
+                sliderEnded(sliderValue)
+                println("Slider released at: $sliderValue")
+            },
+            modifier = Modifier
+                //.fillMaxWidth()
+                //.weight(1f)
+                .pointerInput(Unit) {
+                    // Detect the initial down press/click action
+                    detectTapGestures(
+                        onPress = {
+                            // This runs immediately when the user touches the slider
+                            startVal(sliderValue)
+                            println("Slider touched at: $sliderValue")
+                        }
+                    )
+                }
+        )
     }
 }
 ////////////////////////////////////////////////////////////////////////////
@@ -375,14 +595,7 @@ fun BleScreen(
 ) {
     val events by viewModel.events.collectAsState()
     //val currentStatus by viewModel.statusText.collectAsState()
-
-    var slider0 by remember { mutableFloatStateOf(50f) }
-    var slider1 by remember { mutableFloatStateOf(50f) }
-    var slider2 by remember { mutableFloatStateOf(50f) }
-    var slider3 by remember { mutableFloatStateOf(50f) }
-    var slider4 by remember { mutableFloatStateOf(50f) }
-//    Spacer(Modifier.fillMaxWidth().height(15.dp).background(Color.Red))
-
+    val context = LocalContext.current
     Column(
             //.padding(16.dp)
         modifier = Modifier
@@ -397,48 +610,44 @@ fun BleScreen(
             modifier = Modifier.fillMaxWidth()
         )
         MainButsCommands(viewModel)
-
         Spacer(modifier = Modifier
             .fillMaxWidth()
             .height(10.dp)
-            .background(Color.Green))
+            .background(Color.White))
+
+        CustomActionSliderRow(
+            startVal = { startValue ->
+                // Handle the start of the slider interaction
+                println("Slider started at: $startValue")
+            },
+            sliderEnded = { endValue ->
+                // Handle the end of the slider interaction
+                println("Slider ended at: $endValue")
+                viewModel.sendMotorsVelocity(
+                    CommandToHand.VELOCITY.value,
+                    0,
+                    endValue
+                )
+//                viewModel.sendMotorsVelocity(
+//                                CommandToHand.VELOCITY.value,
+//                                index,
+//                                value = releasedValue
+//                            )
+//
+            }
+        )
+//        Spacer(modifier = Modifier
+//            .fillMaxWidth()
+//            .height(10.dp)
+//            .background(Color.Green))
         //TrackedSlider(viewModel)
         MotorControlScreenRow(viewModel)
 
-        Spacer(modifier = Modifier
-            .fillMaxWidth()
-            .height(10.dp)
-            .background(Color.Blue))
+//        Spacer(modifier = Modifier
+//            .fillMaxWidth()
+//            .height(10.dp)
+//            .background(Color.Blue))
 
-//        SliderRow(
-//            viewModel,
-//            value0 = slider0,
-//            value1 = slider1,
-//            value2 = slider2,
-//            value3 = slider3,
-//            value4 = slider4,
-//            onValue0Change = {
-//                slider0 = it
-//                viewModel.sendMotorsVelocity(CommandToHand.VELOCITY.value,0, value = it)
-//            },
-//            onValue1Change = {
-//                slider1 = it
-//                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 0, value = it)
-//            },
-//            onValue2Change = {
-//                slider2 = it
-//                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 1, it)
-//            },
-//            onValue3Change = {
-//                slider3 = it
-//                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 2, it)
-//            },
-//            onValue4Change = {
-//                slider4 = it
-//                viewModel.sendMotorPosition(CommandToHand.POSITION.value, 3, it)
-//            }
-//
-//        )
         Spacer(modifier = Modifier
             .fillMaxWidth()
             .height(10.dp)
@@ -504,6 +713,16 @@ fun BleScreen(
             ) {
                 Text("Prev")
             }
+///
+///            ExitButtonApp()
+///
+            Button(onClick = {
+                // Cast context to Activity and call finishAndRemoveTask
+                (context as? Activity)?.finishAndRemoveTask()
+            }) {
+                Text(text = "Exit App")
+            }
+///
 
             Button(
                 onClick = onNextScreen,
@@ -518,162 +737,4 @@ fun BleScreen(
             .background(Color.White))
     }
 }
-// TBD1
-@Composable
-fun SliderRow(
-    viewModel: BleViewModel,
-    value0: Float,
-    value1: Float,
-    value2: Float,
-    value3: Float,
-    value4: Float,
-    onValue0Change: (Float) -> Unit,
-    onValue1Change: (Float) -> Unit,
-    onValue2Change: (Float) -> Unit,
-    onValue3Change: (Float) -> Unit,
-    onValue4Change: (Float) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(250.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Spacer(Modifier
-            .fillMaxWidth()
-            .height(4.dp)
-            .background(Color.White))
-        SliderWithValue(viewModel, 0, "V", value = value0, onValue0Change)
-        Spacer(Modifier
-            .fillMaxWidth()
-            .height(10.dp)
-            .background(Color.White))
-        SliderWithValue(viewModel, 1, "M1", value = value1, onValue1Change)
-        SliderWithValue(viewModel, 2, "M2", value = value2, onValue2Change)
-        SliderWithValue(viewModel, 3, "M3", value = value3, onValue3Change)
-        SliderWithValue(viewModel, 4, "M4", value = value4, onValue4Change)
-    }
-}
-//@Composable
-//fun SliderWithValue(
-//    viewModel: BleViewModel,
-//    index: Int,
-//    name: String,
-//    value: Float,
-//    onValueChange: (Float) -> Unit,
-//    modifier: Modifier = Modifier,
-//    interactionSource: InteractionSource = remember { MutableInteractionSource() } // Create a new interaction source
-//) {
-//    Row(
-//        modifier = modifier
-//            .fillMaxWidth()
-//            .height(50.dp),
-//        horizontalArrangement = Arrangement.SpaceBetween,
-//        verticalAlignment = Alignment.CenterVertically
-//    ) {
-//        Text(
-//            text = name,
-//            modifier = Modifier.padding(start = 8.dp)
-//        )
-//        Slider(
-//            value = value,
-//            onValueChange =  onValueChange {
-//                println("Slider val: $value")
-//            },
-//            interactionSource = interactionSource // Pass it here
-//        )
-//
-//
-//
-////        Slider(
-////            value = value,
-////            onValueChange = onValueChange,
-////            valueRange = 0f..100f,
-////            modifier = Modifier
-////                .weight(2f)
-////                .height(50.dp),
-////            enabled = viewModel.updateSlider(index, value)
-////        )
-//
-//        Text(
-//            text = viewModel.getSlider(index).toString(),
-//            modifier = Modifier.padding(start = 12.dp)
-//        )
-//
-//    }
-//}
 
-@Composable
-fun SliderRow1(
-    viewModel: BleViewModel,
-    value0: Float,
-    value1: Float,
-    value2: Float,
-    value3: Float,
-    value4: Float,
-    onValue0Change: (Float) -> Unit,
-    onValue1Change: (Float) -> Unit,
-    onValue2Change: (Float) -> Unit,
-    onValue3Change: (Float) -> Unit,
-    onValue4Change: (Float) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(250.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Spacer(Modifier
-            .fillMaxWidth()
-            .height(4.dp)
-            .background(Color.White))
-        SliderWithValue(viewModel, 0, "V", value = value0, onValue0Change)
-        Spacer(Modifier
-            .fillMaxWidth()
-            .height(10.dp)
-            .background(Color.White))
-        SliderWithValue(viewModel, 1, "M1", value = value1, onValue1Change)
-        SliderWithValue(viewModel, 2, "M2", value = value2, onValue2Change)
-        SliderWithValue(viewModel, 3, "M3", value = value3, onValue3Change)
-        SliderWithValue(viewModel, 4, "M4", value = value4, onValue4Change)
-    }
-}
-
-@Composable
-fun SliderWithValue(
-    viewModel: BleViewModel,
-    index: Int,
-    name: String,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(50.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = name,
-            modifier = Modifier.padding(start = 8.dp)
-        )
-
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = 0f..100f,
-            modifier = Modifier
-                .weight(2f)
-                .height(50.dp),
-            enabled = viewModel.updateSlider(index, value)
-        )
-
-        Text(
-            text = viewModel.getSlider(index).toString(),
-            modifier = Modifier.padding(start = 12.dp)
-        )
-
-    }
-}
