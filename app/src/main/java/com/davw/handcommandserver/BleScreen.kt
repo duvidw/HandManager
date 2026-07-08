@@ -36,6 +36,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import android.os.SystemClock
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -488,11 +490,14 @@ fun CustomActionSliderRowVel(
 @Composable
 fun CustomActionSliderRowPos(
     startVal: (Float) -> Unit,
+    onValueChanged: (Float) -> Unit,
     sliderEnded: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Local state to keep track of the slider's visual position
     var sliderValue by remember { mutableFloatStateOf(50f) }
+    var lastSentAtMs by remember { mutableLongStateOf(0L) }
+    val minSendIntervalMs = 1000L / 1L // 6 updates per second max
 
     Row(
         modifier = modifier.fillMaxWidth().padding(2.dp),
@@ -507,8 +512,12 @@ fun CustomActionSliderRowPos(
             value = sliderValue,
             valueRange = 0f..100f,
             onValueChange = { newValue ->
-                // Updates continuously while moving, displaying the changed value
                 sliderValue = newValue
+                val nowMs = SystemClock.elapsedRealtime()
+                if (nowMs - lastSentAtMs >= minSendIntervalMs) {
+                    onValueChanged(newValue)
+                    lastSentAtMs = nowMs
+                }
             },
             onValueChangeFinished = {
                 // Triggered when the user leaves/releases the slider
@@ -516,8 +525,6 @@ fun CustomActionSliderRowPos(
                 println("Slider released at: $sliderValue")
             },
             modifier = Modifier
-                //.fillMaxWidth()
-                //.weight(1f)
                 .pointerInput(Unit) {
                     // Detect the initial down press/click action
                     detectTapGestures(
@@ -579,14 +586,16 @@ fun BleScreen(
                 // Handle the start of the slider interaction
                 println("Slider started at: $startValue")
             },
+            onValueChanged = { changedValue ->
+                viewModel.sendMotorPosition(
+                    CommandToHand.POSITION.value,
+                    1,
+                    changedValue
+                )
+            },
             sliderEnded = { endValue ->
                 // Handle the end of the slider interaction
                 println("Slider ended at: $endValue")
-                viewModel.sendMotorPosition(
-                    CommandToHand.POSITION.value,
-                    0,
-                    endValue
-                )
             }
         )
         //TrackedSlider(viewModel)
@@ -680,4 +689,3 @@ fun BleScreen(
             .background(Color.White))
     }
 }
-
