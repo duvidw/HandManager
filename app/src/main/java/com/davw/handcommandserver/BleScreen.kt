@@ -5,13 +5,10 @@ package com.davw.handcommandserver
 import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,15 +16,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -47,13 +41,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlin.math.abs
 import androidx.compose.runtime.setValue
 
-const val positionDelta : Float= 5.0f
+// const val positionDelta : Float= 5.0f
+var numPerSecond = 1L
+var minSendIntervalMs = 1000L / 1L // 6 updates per second max
 
 enum class CommandToHand(val value: Int) {
     STOP(0),
@@ -72,55 +65,6 @@ enum class CommandToHand(val value: Int) {
     }
 }
 
-@Composable
-fun CustomStyledButtonRound(
-    text: String,
-    onClick: () -> Unit,
-) {
-    Button(
-        onClick = onClick,
-        contentPadding = PaddingValues(
-            top = 5.dp,
-            bottom = 5.dp,
-            start = 10.dp,
-            end = 10.dp,
-        )
-    ) {
-        Text(
-            text = text,
-            textAlign = TextAlign.Center,
-            style = LocalTextStyle.current.copy(
-                lineHeight = 24.sp,
-            )
-        )
-    }
-}
-
-@Composable
-fun CustomStyledButtonRound2(
-    text: String,
-    onClick: () -> Unit,
-    hPad: Dp = 1.dp,
-    wPad: Dp = 2.dp
-) {
-    Button(
-        onClick = onClick,
-        contentPadding = PaddingValues(
-            top = hPad,
-            bottom = hPad,
-            start = wPad,
-            end = wPad
-        )
-    ) {
-        Text(
-            text = text,
-            textAlign = TextAlign.Center,
-            style = LocalTextStyle.current.copy(
-                lineHeight = 24.sp
-            )
-        )
-    }
-}
 
 /////////////////////////////////////////////////////////////////////////////
 @Composable
@@ -128,7 +72,7 @@ fun MainButsCommands(viewModel: BleViewModel) {
     //val events by viewModel.events.collectAsState()
     Spacer(modifier = Modifier
         .fillMaxWidth()
-        .height(10.dp)
+        .height(6.dp)
         .background(Color.White))
 
     val numbers = (1..6).toList()
@@ -163,10 +107,6 @@ fun MainButsCommands(viewModel: BleViewModel) {
             }
         }
     }
-//    Spacer(modifier = Modifier
-//        .fillMaxWidth()
-//        .height(10.dp)
-//        .background(Color.White))
 
     Spacer(modifier = Modifier
         .fillMaxWidth()
@@ -174,44 +114,6 @@ fun MainButsCommands(viewModel: BleViewModel) {
         .background(Color.Blue))
 }
 ////////////////////////////////////////////////////////////////
-//@Composable
-//fun TrackedSlideVel(
-//    id: Int,
-//    value: Float,
-//    releasedAt: (Float) -> Unit,
-//    modifier: Modifier = Modifier
-//) {
-//    val interactionSource = remember { MutableInteractionSource() }
-//    val latestValue by rememberUpdatedState(value)
-//    val latestReleasedAt by rememberUpdatedState(releasedAt)
-//
-//    LaunchedEffect(interactionSource) {
-//        interactionSource.interactions.collect { interaction ->
-//            when (interaction) {
-//                is PressInteraction.Press -> {
-//                    println("[$id] touch the slider at $latestValue")
-//                    latestReleasedAt(latestValue)
-//                }
-//
-//                is PressInteraction.Release, is PressInteraction.Cancel -> {
-//                    println("[$id] release the slider at $latestValue")
-//                    latestReleasedAt(latestValue)
-//                }
-//            }
-//        }
-//    }
-//
-//    Slider(
-//        value = value,
-//        valueRange = 0f..100f,
-//        onValueChange = { latestReleasedAt(it)
-//            println("[$id] slider velocity changed to $it")
-//                        },
-//
-//        interactionSource = interactionSource,
-//        modifier = modifier
-//    )
-//}
 @Composable
 fun TrackedSlide(
     id: Int,
@@ -252,79 +154,170 @@ fun TrackedSlide(
     )
 }
 
+////////////////////////////////////////////////////////////////////////////
 @Composable
-fun TrackedSliderVelocity(
-    id: Int,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    onDragStatusChange: (Boolean, Float) -> Unit,
+fun CustomActionSliderRowPos(
+    startVal: (Float) -> Unit,
+    onValueChanged: (Float) -> Unit,
+    sliderEnded: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
+    // Local state to keep track of the slider's visual position
+    var sliderValue by remember { mutableFloatStateOf(50f) }
+    var lastSentAtMs by remember { mutableLongStateOf(0L) }
+    //val minSendIntervalMs = 1000L / 1L // 6 updates per second max
 
-    LaunchedEffect(interactionSource) {
-        interactionSource.interactions.collect { interaction ->
-            when (interaction) {
-                is PressInteraction.Press -> {
-                    println("[$id] touch the slider")
-                    onDragStatusChange(true, value)
+    Row(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Displays the changing value in real-time while moving
+        Text(
+            text = "P: ${sliderValue.toInt()}",
+            modifier = Modifier.weight(0.1f)
+        )
+
+        Slider(
+            value = sliderValue,
+            valueRange = 0f..100f,
+            onValueChange = { newValue ->
+                sliderValue = newValue
+                val nowMs = SystemClock.elapsedRealtime()
+                if (nowMs - lastSentAtMs >= minSendIntervalMs) {
+                    onValueChanged(newValue)
+                    lastSentAtMs = nowMs
                 }
-                is PressInteraction.Release, is PressInteraction.Cancel -> {
-                    println("[$id] release the slider")
-                    onDragStatusChange(true, value)
+            },
+            onValueChangeFinished = {
+                // Triggered when the user leaves/releases the slider
+                sliderEnded(sliderValue)
+                println("Slider released at: $sliderValue")
+            },
+            modifier = Modifier
+                .weight(0.8f)
+                .pointerInput(Unit) {
+                    // Detect the initial down press/click action
+                    detectTapGestures(
+                        onPress = {
+                            // This runs immediately when the user touches the slider
+                            startVal(sliderValue)
+                            println("Slider touched at: $sliderValue")
+                        }
+                    )
                 }
-                is DragInteraction.Stop,
-                is DragInteraction.Cancel -> {
-                    println("[$id] release the slider")
-                    onDragStatusChange(true, value)
+        )
+    }
+}
+@Composable
+fun CustomActionSliderRowPosMulti(
+    id: Int,
+    value: Float,
+    startVal: (Float) -> Unit,
+    onValueChanged: (Float) -> Unit,
+    sliderEnded: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Local state to keep track of the slider's visual position
+    var sliderValue by remember { mutableFloatStateOf(50f) }
+    var lastSentAtMs by remember { mutableLongStateOf(0L) }
+    //val minSendIntervalMs = 1000L / 1L // 6 updates per second max
+
+    Row(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Displays the changing value in real-time while moving
+        Text(
+            text = "P: ${sliderValue.toInt()}",
+            modifier = Modifier.weight(0.2f)
+        )
+
+        Slider(
+            value = sliderValue,
+            valueRange = 0f..100f,
+            onValueChange = { newValue ->
+                sliderValue = newValue
+                val nowMs = SystemClock.elapsedRealtime()
+                if (nowMs - lastSentAtMs >= minSendIntervalMs) {
+                    onValueChanged(newValue)
+                    lastSentAtMs = nowMs
+                }
+            },
+            onValueChangeFinished = {
+                // Triggered when the user leaves/releases the slider
+                sliderEnded(sliderValue)
+                println("Slider released at: $sliderValue")
+            },
+            modifier = Modifier
+                .weight(0.7f)
+                .pointerInput(Unit) {
+                    // Detect the initial down press/click action
+                    detectTapGestures(
+                        onPress = {
+                            // This runs immediately when the user touches the slider
+                            startVal(sliderValue)
+                            println("Slider touched at: $sliderValue")
+                        }
+                    )
+                }
+        )
+    }
+}
+
+@Composable
+fun MotorControlScreenRow(viewModel: BleViewModel) {
+    // Local state for 4 sliders (Initial value 50f each)
+    // Note: If your ViewModel already tracks these values, use those instead!
+    val sliderValues = remember { mutableStateListOf(50f, 50f, 50f, 50f, 50f) }
+
+    Column(
+        modifier = Modifier.padding(horizontal = 8.dp),
+    ) {
+        sliderValues.forEachIndexed { index, currentValue ->
+            Row (
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                //,
+                //verticalAlignment = Alignment.CenterVertically // 1. Vertically centers text and slider
+            ){
+                if (index == 0) {
+                    println("Place for Slider 0")
+                } else {
+//////////////////////////////////////////////////////////////////////////////////
+                    CustomActionSliderRowPosMulti(
+                        id = index,
+                        value = currentValue,
+                        startVal = { startValue ->
+                            // Handle the start of the slider interaction
+                            println("Slider started at: $startValue")
+                        },
+                        onValueChanged = { changedValue ->
+                            sliderValues[index] = changedValue
+                            viewModel.sendMotorPosition(
+                                CommandToHand.POSITION.value,
+                                index,
+                                value = changedValue,
+                            )
+                        },
+                        sliderEnded = { endValue ->
+                            // Handle the end of the slider interaction
+                            sliderValues[index] = endValue
+                            viewModel.sendMotorPosition(
+                                CommandToHand.POSITION.value,
+                                index,
+                                value = endValue,
+                                )
+                            println("Slider ended at: $endValue")
+                        }
+                    )
+
                 }
             }
         }
     }
-
-    Slider(
-        value = value,
-        valueRange = 0f..100f,
-        onValueChange = { newValue ->
-            // Keep your threshold logic if needed
-            if (abs(value - newValue) >= positionDelta) {
-                onValueChange(newValue)
-            }
-        },
-        interactionSource = interactionSource,
-        modifier = modifier
-    )
 }
-
-//@Composable
-//fun TrackedSlider1(
-//    id: Int,
-//    value: Float,
-//    onValueChange: (Float) -> Unit,
-//    onDragStatusChange: (Boolean, Float) -> Unit,
-//    modifier: Modifier = Modifier
-//) {
-//    val interactionSource = remember { MutableInteractionSource() }
-//    val isDragging by interactionSource.collectIsDraggedAsState()
-//
-//    // Track drag start/stop events
-//    LaunchedEffect(isDragging) {
-//        onDragStatusChange(isDragging, value)
-//    }
-//
-//    Slider(
-//        value = value,
-//        valueRange = 0f..100f,
-//        onValueChange = { newValue ->
-//            if (abs(value - newValue) >= positionDelta) {
-//                onValueChange(newValue)
-//            }
-//        },
-//        interactionSource = interactionSource
-//    )
-//}
+////////////////////////////////////////////////////////////////////////////
 @Composable
-fun MotorControlScreenRow(viewModel: BleViewModel) {
+fun MotorControlScreenRow0(viewModel: BleViewModel) {
     // Local state for 4 sliders (Initial value 50f each)
     // Note: If your ViewModel already tracks these values, use those instead!
     val sliderValues = remember { mutableStateListOf(50f, 50f, 50f, 50f, 50f) }
@@ -343,12 +336,13 @@ fun MotorControlScreenRow(viewModel: BleViewModel) {
 
                     Text(
                         text = "M${index }: ${currentValue.toInt()}",
+                        modifier = Modifier.weight(0.25f)
                     )
 
                     TrackedSlide(
                         id = index,
                         value = currentValue,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(0.75f),
                         touchedAt = { touchedValue ->
                             println("Motor $index started dragging at: $touchedValue")
                         },
@@ -373,74 +367,6 @@ fun MotorControlScreenRow(viewModel: BleViewModel) {
 }
 ////////////////////////////////////////////////////////////////////////////
 @Composable
-fun ExitButtonApp() {
-    // Get the current context
-    val context = LocalContext.current
-
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Button(onClick = {
-            // Cast context to Activity and call finishAndRemoveTask
-            (context as? Activity)?.finishAndRemoveTask()
-        }) {
-            Text(text = "Exit App")
-        }
-    }
-}
-////////////////////////////////////////////////////////////////////////////
-@Composable
-fun CustomActionSliderCOL(
-    startVal: (Float) -> Unit,
-    sliderEnded: (Float) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    // Local state to keep track of the slider's visual position
-    var sliderValue by remember { mutableFloatStateOf(0f) }
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Displays the changing value in real-time while moving
-        Text(
-            text = "Value: ${"%.1f".format(sliderValue)}",
-            fontSize = 24.sp
-        )
-        // HorizontalDivider(thickness = 10.dp, color = Color.Red)
-        // Spacer(modifier = Modifier.width(16.dp).background(Color.Blue))
-
-        Slider(
-            value = sliderValue,
-            valueRange = 0f..100f,
-            onValueChange = { newValue ->
-                // Updates continuously while moving, displaying the changed value
-                sliderValue = newValue
-            },
-            onValueChangeFinished = {
-                // Triggered when the user leaves/releases the slider
-                sliderEnded(sliderValue)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .pointerInput(Unit) {
-                    // Detect the initial down press/click action
-                    detectTapGestures(
-                        onPress = {
-                            // This runs immediately when the user touches the slider
-                            startVal(sliderValue)
-                        }
-                    )
-                }
-        )
-    }
-}
-////////////////////////////////////////////////////////////////////////////
-@Composable
 fun CustomActionSliderRowVel(
     startVal: (Float) -> Unit,
     sliderEnded: (Float) -> Unit,
@@ -456,6 +382,7 @@ fun CustomActionSliderRowVel(
         // Displays the changing value in real-time while moving
         Text(
             text = "V: ${sliderValue.toInt()}",
+            modifier = Modifier.weight(0.1f)
         )
 
         Slider(
@@ -471,60 +398,7 @@ fun CustomActionSliderRowVel(
                 println("Slider released at: $sliderValue")
             },
             modifier = Modifier
-                //.fillMaxWidth()
-                //.weight(1f)
-                .pointerInput(Unit) {
-                    // Detect the initial down press/click action
-                    detectTapGestures(
-                        onPress = {
-                            // This runs immediately when the user touches the slider
-                            startVal(sliderValue)
-                            println("Slider touched at: $sliderValue")
-                        }
-                    )
-                }
-        )
-    }
-}
-////////////////////////////////////////////////////////////////////////////
-@Composable
-fun CustomActionSliderRowPos(
-    startVal: (Float) -> Unit,
-    onValueChanged: (Float) -> Unit,
-    sliderEnded: (Float) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    // Local state to keep track of the slider's visual position
-    var sliderValue by remember { mutableFloatStateOf(50f) }
-    var lastSentAtMs by remember { mutableLongStateOf(0L) }
-    val minSendIntervalMs = 1000L / 1L // 6 updates per second max
-
-    Row(
-        modifier = modifier.fillMaxWidth().padding(2.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Displays the changing value in real-time while moving
-        Text(
-            text = "P: ${sliderValue.toInt()}",
-        )
-
-        Slider(
-            value = sliderValue,
-            valueRange = 0f..100f,
-            onValueChange = { newValue ->
-                sliderValue = newValue
-                val nowMs = SystemClock.elapsedRealtime()
-                if (nowMs - lastSentAtMs >= minSendIntervalMs) {
-                    onValueChanged(newValue)
-                    lastSentAtMs = nowMs
-                }
-            },
-            onValueChangeFinished = {
-                // Triggered when the user leaves/releases the slider
-                sliderEnded(sliderValue)
-                println("Slider released at: $sliderValue")
-            },
-            modifier = Modifier
+                .weight(0.8f)
                 .pointerInput(Unit) {
                     // Detect the initial down press/click action
                     detectTapGestures(
@@ -554,18 +428,21 @@ fun BleScreen(
             .safeDrawingPadding()
     )
     {
+        // Headers
         Text(
             "Android Hand Commander",
             style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
+        // Main Buttons
         MainButsCommands(viewModel)
         Spacer(modifier = Modifier
             .fillMaxWidth()
             .height(10.dp)
             .background(Color.White))
 
+        // Velocity Slider
         CustomActionSliderRowVel(
             startVal = { startValue ->
                 // Handle the start of the slider interaction
@@ -581,43 +458,24 @@ fun BleScreen(
                 )
             }
         )
-        CustomActionSliderRowPos(
-            startVal = { startValue ->
-                // Handle the start of the slider interaction
-                println("Slider started at: $startValue")
-            },
-            onValueChanged = { changedValue ->
-                viewModel.sendMotorPosition(
-                    CommandToHand.POSITION.value,
-                    1,
-                    changedValue
-                )
-            },
-            sliderEnded = { endValue ->
-                // Handle the end of the slider interaction
-                println("Slider ended at: $endValue")
-            }
-        )
-        //TrackedSlider(viewModel)
+
+
+        // Motor Control Sliders
         MotorControlScreenRow(viewModel)
 
+        // Special Commands Buttons
         Spacer(modifier = Modifier
             .fillMaxWidth()
-            .height(10.dp)
+            .height(2.dp)
             .background(Color.White))
 
         val numbers = (1..8).toList()
 
-        val numCmd = intArrayOf(21, 22, 23, 24, 25, 26, 27, 28)
+       // val numCmd = intArrayOf(21, 22, 23, 24, 25, 26, 27, 28)
         val buttonsText = arrayOf(
             "1", "2", "3", "4",
             "5", "6", "7", "8"
         )
-
-        Spacer(modifier = Modifier
-            .fillMaxWidth()
-            .height(2.dp)
-            .background(Color.Blue))
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(4),
@@ -629,7 +487,7 @@ fun BleScreen(
         ) {
             items(numbers) { num ->
                 Button(
-                    onClick = { viewModel.sendNotificationSpecialCommand(numCmd[num - 1]) },
+                    {specialCommandDo(num, viewModel)},
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
@@ -639,9 +497,11 @@ fun BleScreen(
                 }
             }
         }
+
+        // ListBox Log
         Spacer(modifier = Modifier
             .fillMaxWidth()
-            .height(10.dp)
+            .height(2.dp)
             .background(Color.White))
         LazyColumn(
             modifier = Modifier
@@ -654,6 +514,7 @@ fun BleScreen(
             }
         }
 
+        // Navigation Buttons
         Spacer(modifier = Modifier
             .fillMaxWidth()
             .height(2.dp)
@@ -689,3 +550,18 @@ fun BleScreen(
             .background(Color.White))
     }
 }
+
+fun specialCommandDo(id: Int, viewModel: BleViewModel) {
+    when (id) {
+        1 -> numPerSecond = 1L
+        2 -> numPerSecond = 2L
+        3 -> numPerSecond = 3L
+        4 -> numPerSecond = 4L
+        5 -> viewModel.sendNotificationSpecialCommand(25)
+        6 -> viewModel.sendNotificationSpecialCommand(26)
+        7 -> viewModel.sendNotificationSpecialCommand(27)
+        8 -> viewModel.sendNotificationSpecialCommand(28)
+
+    }
+}
+//================================================================================
