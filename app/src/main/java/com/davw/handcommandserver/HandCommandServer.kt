@@ -585,6 +585,33 @@ class NimbleServer(private val context: Context) {
         }
     }
 
+    @SuppressLint("MissingPermission")
+    fun shutdown() {
+        connectedDevice?.let { device ->
+            runCatching {
+                cancelDeviceConnection(device)
+            }.onFailure {
+                onEvent("Disconnect failed: ${it.message}")
+            }
+        }
+        connectedDevice = null
+
+        runCatching {
+            advertiser?.stopAdvertising(advertiseCallback)
+        }.onFailure {
+            onEvent("Stop advertise failed: ${it.message}")
+        }
+        advertiser = null
+
+        runCatching {
+            gattServer?.close()
+        }.onFailure {
+            onEvent("Gatt close failed: ${it.message}")
+        }
+        gattServer = null
+        onEvent("Server shutdown")
+    }
+
     fun setMotor(index: Int) {
         motors[index] = movementType
         val msg = "Motor: ${index} - ${movementType}"

@@ -535,6 +535,7 @@ fun BleScreen(
                 Text("Prev")
             }
             Button(onClick = {
+                viewModel.disconnectAndCloseServer()
                 // Cast context to Activity and call finishAndRemoveTask
                 (context as? Activity)?.finishAndRemoveTask()
             }) {

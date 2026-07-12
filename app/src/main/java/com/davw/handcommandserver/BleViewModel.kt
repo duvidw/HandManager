@@ -79,12 +79,26 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         serverStarted = true
     }
 
+    fun disconnectAndCloseServer() {
+        server.shutdown()
+        serverStarted = false
+    }
+
     fun sendNotification(ty : Int) {
         if (!hasBluetoothConnectPermission()) {
             _events.update { it + "Missing BLUETOOTH_CONNECT permission" }
             return
         }
+        if (ty == 9) {
+            server.disconnect()
+            server.subscribe()
+            println("Sent notification type 9: Disconnect and subscribe")
+        }
         server.sendNotification(ty)
+    }
+
+    private fun subscribe() {
+        server.subscribe()
     }
 
     fun sendMotorsVelocity(ty : Int, motorNum: Int, value: Float) {
