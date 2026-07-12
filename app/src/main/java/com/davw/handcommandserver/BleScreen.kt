@@ -183,9 +183,11 @@ fun CustomActionSliderRowPos(
             onValueChange = { newValue ->
                 sliderValue = newValue
                 val nowMs = SystemClock.elapsedRealtime()
+                println("A-Change position value : $numPerSecond times per second, new value: $newValue")
                 if (nowMs - lastSentAtMs >= minSendIntervalMs) {
                     onValueChanged(newValue)
                     lastSentAtMs = nowMs
+                    println("B-Change position value : $numPerSecond times per second, new value: $newValue")
                 }
             },
             onValueChangeFinished = {
@@ -280,7 +282,7 @@ fun MotorControlScreenRow(viewModel: BleViewModel) {
                 //verticalAlignment = Alignment.CenterVertically // 1. Vertically centers text and slider
             ){
                 if (index == 0) {
-                    println("Place for Slider 0")
+                    //println("Place for Slider 0")
                 } else {
 //////////////////////////////////////////////////////////////////////////////////
                     CustomActionSliderRowPosMulti(
