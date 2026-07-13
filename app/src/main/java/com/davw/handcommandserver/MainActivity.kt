@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Build
+import android.os.Process
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -24,10 +25,13 @@ enum class AppScreen {
 }
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var viewModel: BleViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val viewModel = ViewModelProvider(this)[BleViewModel::class.java]
+        viewModel = ViewModelProvider(this)[BleViewModel::class.java]
 
         setContent {
             val context = LocalContext.current
@@ -77,5 +81,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        // Shut down BLE server and release all resources when the activity is fully destroyed
+        if (isFinishing) {
+            viewModel.disconnectAndCloseServer()
+        }
+        super.onDestroy()
     }
 }

@@ -19,6 +19,8 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.ParcelUuid
 import android.util.Log
 import androidx.annotation.RequiresPermission
@@ -31,6 +33,7 @@ class NimbleServer(private val context: Context) {
     private val serviceUUID = UUID.fromString("0000abcd-0000-1000-8000-00805f9b34fb" )
     private val charUUID = UUID.fromString("0000dcba-0000-1000-8000-00805f9b34fb")
     private val CCC_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+    private val mainHandler = Handler(Looper.getMainLooper())
 
 
     //////////////////////////////////////////////////////////////////////////////
@@ -43,7 +46,17 @@ class NimbleServer(private val context: Context) {
     // This is the property you asked about
     private var advertiser: BluetoothLeAdvertiser? = null
 
+    @SuppressLint("MissingPermission")
     fun startAdvertising() {
+        if (!hasBluetoothAdvertisePermission()) {
+            onEvent("Missing BLUETOOTH_ADVERTISE permission")
+            return
+        }
+
+        runCatching {
+            advertiser?.stopAdvertising(advertiseCallback)
+        }
+
         // Initialize it here to ensure Bluetooth is actually ON
         advertiser = bluetoothAdapter?.bluetoothLeAdvertiser
 
@@ -72,6 +85,7 @@ class NimbleServer(private val context: Context) {
     }
     //////////////////////////////////////////////////////////////////////////////
     var onEvent: (String) -> Unit = {}
+    var onConnectionChanged: (Boolean) -> Unit = {}
 
     private var gattServer: BluetoothGattServer? = null
     private var connectedDevice: BluetoothDevice? = null
@@ -81,6 +95,14 @@ class NimbleServer(private val context: Context) {
             ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun hasBluetoothAdvertisePermission(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_ADVERTISE
             ) == PackageManager.PERMISSION_GRANTED
     }
 
@@ -121,6 +143,10 @@ class NimbleServer(private val context: Context) {
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun start(context: Context) {
+        if (gattServer != null) {
+            return
+        }
+
         val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         gattServer = manager.openGattServer(context, callback)
 
@@ -151,10 +177,12 @@ class NimbleServer(private val context: Context) {
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 connectedDevice = device
+                onConnectionChanged(true)
                 onEvent("Connection OK: ${device.address} ${device.name}")
             } else {
                 onEvent("Disconnected")
                 connectedDevice = null
+                onConnectionChanged(false)
             }
         }
 
@@ -571,11 +599,11 @@ class NimbleServer(private val context: Context) {
         onEvent(msgText)
     }
 
-    fun subscribe() {
+    fun subscribeEvent() {
         onEvent("Subscribe requested")
     }
 
-    fun disconnect() {
+    fun subscribe() {
         if (!hasBluetoothConnectPermission()) {
             return onEvent("Missing BLUETOOTH_CONNECT permission")
         }
@@ -584,9 +612,84 @@ class NimbleServer(private val context: Context) {
             onEvent("Disconnect requested")
         }
     }
+    fun disconnect() {
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+
+        val device = connectedDevice
+        if (device == null) {
+            onEvent("No device connected")
+            restartGattServerForNextConnection()
+            return
+        }
+
+        runCatching {
+            sendCommandNotification(0.toByte(), 0)
+            onEvent("STOP command sent before disconnect")
+        }.onFailure {
+            onEvent("Error sending STOP: ${it.message}")
+        }
+
+        runCatching {
+            cancelDeviceConnection(device)
+        }.onFailure {
+            onEvent("Cancel connection failed: ${it.message}")
+        }
+
+        connectedDevice = null
+        onConnectionChanged(false)
+        onEvent("Hard disconnect requested")
+
+        restartGattServerForNextConnection()
+    }
+
+    fun ensureAdvertising() {
+        // Public method to ensure the server is advertising and ready for new connections
+        startAdvertising()
+    }
+
+    fun sendDisconnectNotification() {
+        // Send a disconnect/shutdown notification to the esp32
+        try {
+            sendCommandNotification(0.toByte(), 0)  // STOP command
+            onEvent("Disconnect notification sent to device")
+        } catch (e: Exception) {
+            onEvent("Error sending disconnect notification: ${e.message}")
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun restartGattServerForNextConnection() {
+        if (!hasBluetoothConnectPermission() || !hasBluetoothAdvertisePermission()) {
+            onEvent("Missing Bluetooth permission to restart server")
+            return
+        }
+
+        runCatching {
+            advertiser?.stopAdvertising(advertiseCallback)
+        }.onFailure {
+            onEvent("Stop advertise failed: ${it.message}")
+        }
+        advertiser = null
+
+        runCatching {
+            gattServer?.close()
+        }.onFailure {
+            onEvent("Gatt close failed: ${it.message}")
+        }
+        gattServer = null
+
+        mainHandler.removeCallbacksAndMessages(null)
+        mainHandler.postDelayed({
+            start(context)
+            onEvent("Server restarted and ready for new connection")
+        }, 300)
+    }
 
     @SuppressLint("MissingPermission")
     fun shutdown() {
+        mainHandler.removeCallbacksAndMessages(null)
         connectedDevice?.let { device ->
             runCatching {
                 cancelDeviceConnection(device)

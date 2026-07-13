@@ -20,12 +20,22 @@ import java.io.IOException
 
 class BleViewModel(application: Application) : AndroidViewModel(application) {
 
+    /** Called by the OS when the ViewModel is permanently destroyed (app is finishing). */
+    override fun onCleared() {
+        super.onCleared()
+        server.shutdown()
+        serverStarted = false
+    }
+
     private val server = NimbleServer(application)
     private val defaultCommandCount = 8
     private var serverStarted = false
 
     private val _events = MutableStateFlow<List<String>>(emptyList())
     val events = _events.asStateFlow()
+
+    private val _isConnected = MutableStateFlow(false)
+    val isConnected = _isConnected.asStateFlow()
     //var selectedCommand by mutableStateOf<Int?>(null)
     val directCommands = mutableStateListOf<DirectCommandConfig>().apply {
         addAll(loadInitialDirectCommands())
@@ -67,6 +77,9 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         server.onEvent = { msg ->
             _events.update { it + msg }
         }
+        server.onConnectionChanged = { connected ->
+            _isConnected.value = connected
+        }
         displayStatus()
     }
 
@@ -91,14 +104,27 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         }
         if (ty == 9) {
             server.disconnect()
-            server.subscribe()
-            println("Sent notification type 9: Disconnect and subscribe")
+            println("Requested hard disconnect and server restart")
+            return
         }
         server.sendNotification(ty)
     }
 
-    private fun subscribe() {
+    fun subscribe() {
         server.subscribe()
+    }
+    fun disconnect() {
+        server.disconnect()
+    }
+
+    fun sendDisconnectNotification() {
+        // Send explicit disconnect notification to ESP32
+        server.sendDisconnectNotification()
+    }
+
+    fun ensureReadyForNewConnection() {
+        // Explicitly ensure the server is advertising (useful if advertising stops unexpectedly)
+        server.ensureAdvertising()
     }
 
     fun sendMotorsVelocity(ty : Int, motorNum: Int, value: Float) {
@@ -284,6 +310,10 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
                 action = "Action for command ${index + 1}"
             )
         }
+    }
+
+    fun shutdown() {
+        server.shutdown()
     }
 
 }
