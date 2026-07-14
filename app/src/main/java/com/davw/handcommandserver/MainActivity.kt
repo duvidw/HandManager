@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Build
-import android.os.Process
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -86,8 +85,10 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         // Shut down BLE server and release all resources when the activity is fully destroyed
         if (isFinishing) {
+            println("MainActivity is finishing, disconnecting and closing BLE server.")
             viewModel.disconnectAndCloseServer()
         }
+        println("MainActivity onDestroy called.")
         super.onDestroy()
     }
 }

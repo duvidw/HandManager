@@ -46,7 +46,8 @@ import androidx.compose.runtime.setValue
 
 // const val positionDelta : Float= 5.0f
 var numPerSecond = 1L
-var minSendIntervalMs = 1000L / 1L // 6 updates per second max
+var minSendIntervalMs = 1000L / numPerSecond  // 1L // 6 updates per second max
+val verHeader = "Hand Commander v0.0.2"
 
 enum class CommandToHand(val value: Int) {
     STOP(0),
@@ -329,7 +330,7 @@ fun BleScreen(
     {
         // Headers
         Text(
-            "Hand Commander V0.0.1",
+            verHeader,
             style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
@@ -338,7 +339,12 @@ fun BleScreen(
         MainButsCommands(viewModel)
         Spacer(modifier = Modifier
             .fillMaxWidth()
-            .height(3.dp)
+            .height(2.dp)
+            .background(Color.White)
+        )
+        Spacer(modifier = Modifier
+            .fillMaxWidth()
+            .height(4.dp)
             .background(connectColor)
         )
 
@@ -373,7 +379,7 @@ fun BleScreen(
 
        // val numCmd = intArrayOf(21, 22, 23, 24, 25, 26, 27, 28)
         val buttonsText = arrayOf(
-            "Sub", "Dis", "Dis Note", "4",
+            "Sub", "2", "3", "4",
             "5", "6", "7", "8"
         )
 
@@ -433,7 +439,8 @@ fun BleScreen(
                 Text("Prev")
             }
             Button(onClick = {
-                viewModel.disconnectAndCloseServer()
+                viewModel.sendDisconnectNotification()
+                //viewModel.disconnectAndCloseServer()
                 // Cast context to Activity and call finishAndRemoveTask
                 (context as? Activity)?.finishAndRemoveTask()
             }) {
@@ -455,9 +462,9 @@ fun BleScreen(
 fun specialCommandDo(id: Int, viewModel: BleViewModel) {
     when (id) {
         1 -> viewModel.subscribe()
-        2 -> viewModel.disconnect()
-        3 -> viewModel.sendDisconnectNotification()
-        4 -> numPerSecond = 1L
+        2 -> numPerSecond = 2L
+        3 -> numPerSecond = 3L
+        4 -> numPerSecond = 4L
         5 -> viewModel.sendNotificationSpecialCommand(25)
         6 -> viewModel.sendNotificationSpecialCommand(26)
         7 -> viewModel.sendNotificationSpecialCommand(27)

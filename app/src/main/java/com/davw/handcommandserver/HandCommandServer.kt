@@ -32,7 +32,7 @@ class NimbleServer(private val context: Context) {
 
     private val serviceUUID = UUID.fromString("0000abcd-0000-1000-8000-00805f9b34fb" )
     private val charUUID = UUID.fromString("0000dcba-0000-1000-8000-00805f9b34fb")
-    private val CCC_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+    private val ccccUUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     private val mainHandler = Handler(Looper.getMainLooper())
 
 
@@ -124,22 +124,22 @@ class NimbleServer(private val context: Context) {
 //    private val charUUID = UUID.fromString("0000abce-0000-1000-8000-00805f9b34fb")
 //    private val CCC_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
-    val motors = ByteArray(5) {0}// index 0-7 val 0 no move motor st index
+    val motors = ByteArray(5) // {0}// index 0-7 val 0 no move motor st index
                                       // val 1 move forward
                                       // val 2 move backward
-    val motorsAbsPos = ByteArray(16) {0}  // index:0 241
+//    val motorsAbsPos = ByteArray(16) // {0}  // index:0 241
 
-    val motorsAction = ByteArray(16) {0}// index: 0- 242
+//    val motorsAction = ByteArray(16) // {0}// index: 0- 242
                                             // index: 1 - motor 1 direction 0 stop, 1 forward, 2 bacward
                                             // index: 2 - motor 1 nn move encoder count
                                             // indexed: 3,4; 5,6; 7,8 as above for motors 2,3,4
 
-    val motorsPacket = ByteArray(8) {0}  // index:0 241
+    val motorsPacket = ByteArray(8) // {0}  // index:0 241
 
 
-    var movementType: Byte = 0;
+    var movementType: Byte = 0x0
 
-    var motorAbsPosVals = IntArray(5) { 0}
+    var motorAbsPosVals = IntArray(5) // { 0}
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun start(context: Context) {
@@ -157,7 +157,7 @@ class NimbleServer(private val context: Context) {
         )
 
         val cccDescriptor = BluetoothGattDescriptor(
-            CCC_UUID,
+            ccccUUID,
             BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE
             )
 
@@ -178,7 +178,7 @@ class NimbleServer(private val context: Context) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 connectedDevice = device
                 onConnectionChanged(true)
-                onEvent("Connection OK: ${device.address} ${device.name}")
+                onEvent("Connection OK: ${device.address}") // ${device.name}") // place for the device client name
             } else {
                 onEvent("Disconnected")
                 connectedDevice = null
@@ -196,7 +196,7 @@ class NimbleServer(private val context: Context) {
             offset: Int,
             value: ByteArray
         ) {
-            if (descriptor.uuid == CCC_UUID) {
+            if (descriptor.uuid == ccccUUID) {
 
                 val enable = value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE) ||
                         value.contentEquals(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE)
@@ -237,7 +237,7 @@ class NimbleServer(private val context: Context) {
             connectionOK = false
             msgConnect = "* "
         }
-        var msgText = ""
+        var msgText: String
 
         if (ty == CommandToHand.VELOCITY.value) {
             msgText = "Velcity"
@@ -254,7 +254,7 @@ class NimbleServer(private val context: Context) {
             return onEvent("Missing BLUETOOTH_CONNECT permission")
         }
         if (!connectionOK) {
-            return  // onEvent("No device connected")} // no need event
+            return  // onEvent("No device connected") // no need event
         }
         val device = connectedDevice ?: return onEvent("No device connected")
 
@@ -276,7 +276,7 @@ class NimbleServer(private val context: Context) {
             connectionOK = false
             msgConnect = "* "
         }
-        var msgText = ""
+        var msgText : String
 
         if (ty == CommandToHand.POSITION.value) {
             msgText = "Position"
@@ -293,7 +293,7 @@ class NimbleServer(private val context: Context) {
             return onEvent("Missing BLUETOOTH_CONNECT permission")
         }
         if (!connectionOK) {
-            return  // onEvent("No device connected")} // no need event
+            return  // onEvent("No device connected") // no need event
         }
         val device = connectedDevice ?: return onEvent("No device connected")
 
@@ -316,7 +316,7 @@ class NimbleServer(private val context: Context) {
             connectionOK = false
             msgConnect = "* "
         }
-        var msgText = ""
+        var msgText: String
         when (ty) {
             CommandToHand.CALIBRATION.value -> {
                 msgText = "Calibration"
@@ -355,7 +355,7 @@ class NimbleServer(private val context: Context) {
             return onEvent("Missing BLUETOOTH_CONNECT permission")
         }
         if (!connectionOK) {
-            return  // onEvent("No device connected")} // no need event
+            return  // onEvent("No device connected") // no need event
         }
         val device = connectedDevice ?: return onEvent("No device connected")
 
@@ -378,8 +378,8 @@ class NimbleServer(private val context: Context) {
             connectionOK = false
             msgConnect = "* "
         }
-        var msgText = ""
-        if (21 <= ty && ty <= 28) {
+        var msgText : String
+        if (ty in 21..28) {
             msgText = "Special: $ty"
             motorsPacket[0] = ty.toByte()
         } else {
@@ -392,7 +392,7 @@ class NimbleServer(private val context: Context) {
             return onEvent("Missing BLUETOOTH_CONNECT permission")
         }
         if (!connectionOK) {
-            return  // onEvent("No device connected")} // no need event
+            return  // onEvent("No device connected") // no need event
         }
         val device = connectedDevice ?: return onEvent("No device connected")
 
@@ -404,59 +404,59 @@ class NimbleServer(private val context: Context) {
         notifyCharacteristic(device, characteristic)
 
     }
-    fun sendNotification_0(ty : Int) {
-        if (!hasBluetoothConnectPermission()) {
-            return onEvent("Missing BLUETOOTH_CONNECT permission")
-        }
-        val device = connectedDevice ?: return onEvent("No device connected")
-
-        //val data = ByteArray(16) { 0x01 } // 16 bytes
-        //val data = byteArrayOf(5, 1, 2, 3, 4)
-        var msgText = ""
-        val characteristic = gattServer
-            ?.getService(serviceUUID)
-            ?.getCharacteristic(charUUID)
-        if (ty == 1) {
-            motorsAbsPos[0] = 241.toByte()
-            motorsAbsPos[1] = motorAbsPosVals[0].toByte()
-            motorsAbsPos[2] = motorAbsPosVals[1].toByte()
-            motorsAbsPos[3] = motorAbsPosVals[2].toByte()
-            motorsAbsPos[4] = motorAbsPosVals[3].toByte()
-            motorsAbsPos[5] = 60
-
-
-            characteristic?.value = motorsAbsPos
-            notifyCharacteristic(device, characteristic)
-            msgText = "ty:1->" + motorsAbsPos.joinToString(separator = ", ") { it.toString() }
-        }
-        else if (ty == 2)
-        {
-            motorsAction[0] = 242.toByte()
-            //M1
-            motorsAction[1] = motors[0]
-            motorsAction[2] = 30.toByte()
-            //M2
-            motorsAction[3] = motors[1]
-            motorsAction[4] = 31.toByte()
-            //M3
-            motorsAction[5] = motors[2]
-            motorsAction[6] = 32.toByte()
-            //M4
-            motorsAction[7] = motors[3]
-            motorsAction[8] = 33.toByte()
-//            //M5
-//            motorsAction[9] = motors[4]
-//            motorsAction[10] = 34.toByte()
-
-            characteristic?.value = motorsAction
-            notifyCharacteristic(device, characteristic)
-            msgText = "ty:2->" + motorsAction.joinToString(separator = ", ") { it.toString() }
-
-        }
-        //val msgText0 = "Sent: ${data[0]}: ${data[1]},${data[2]},${data[3]},${data[4]}"
-
-        onEvent(msgText)
-    }
+//    fun sendNotification_0(ty : Int) {
+//        if (!hasBluetoothConnectPermission()) {
+//            return onEvent("Missing BLUETOOTH_CONNECT permission")
+//        }
+//        val device = connectedDevice ?: return onEvent("No device connected")
+//
+//        //val data = ByteArray(16) { 0x01 } // 16 bytes
+//        //val data = byteArrayOf(5, 1, 2, 3, 4)
+//        var msgText = ""
+//        val characteristic = gattServer
+//            ?.getService(serviceUUID)
+//            ?.getCharacteristic(charUUID)
+//        if (ty == 1) {
+//            motorsAbsPos[0] = 241.toByte()
+//            motorsAbsPos[1] = motorAbsPosVals[0].toByte()
+//            motorsAbsPos[2] = motorAbsPosVals[1].toByte()
+//            motorsAbsPos[3] = motorAbsPosVals[2].toByte()
+//            motorsAbsPos[4] = motorAbsPosVals[3].toByte()
+//            motorsAbsPos[5] = 60
+//
+//
+//            characteristic?.value = motorsAbsPos
+//            notifyCharacteristic(device, characteristic)
+//            msgText = "ty:1->" + motorsAbsPos.joinToString(separator = ", ") { it.toString() }
+//        }
+//        else if (ty == 2)
+//        {
+//            motorsAction[0] = 242.toByte()
+//            //M1
+//            motorsAction[1] = motors[0]
+//            motorsAction[2] = 30.toByte()
+//            //M2
+//            motorsAction[3] = motors[1]
+//            motorsAction[4] = 31.toByte()
+//            //M3
+//            motorsAction[5] = motors[2]
+//            motorsAction[6] = 32.toByte()
+//            //M4
+//            motorsAction[7] = motors[3]
+//            motorsAction[8] = 33.toByte()
+////            //M5
+////            motorsAction[9] = motors[4]
+////            motorsAction[10] = 34.toByte()
+//
+//            characteristic?.value = motorsAction
+//            notifyCharacteristic(device, characteristic)
+//            msgText = "ty:2->" + motorsAction.joinToString(separator = ", ") { it.toString() }
+//
+//        }
+//        //val msgText0 = "Sent: ${data[0]}: ${data[1]},${data[2]},${data[3]},${data[4]}"
+//
+//        onEvent(msgText)
+//    }
     fun sendCommandNotificationPos(cmnd: Byte, iPos: Float) {
         if (!hasBluetoothConnectPermission()) {
             return onEvent("Missing BLUETOOTH_CONNECT permission")
@@ -478,28 +478,28 @@ class NimbleServer(private val context: Context) {
 
         onEvent(msgText)
     }
-    fun sendCommandNotification4MotorPos(cmnd: Byte, iPos: Float) {
-        if (!hasBluetoothConnectPermission()) {
-            return onEvent("Missing BLUETOOTH_CONNECT permission")
-        }
-        val device = connectedDevice ?: return onEvent("No device connected")
-        val packet = ByteArray(3)
-        packet[0] = 242.toByte() // command type
-        // set pos data to motors 1-4
-        packet[1] = cmnd
-        packet[2] = iPos.toInt().toByte()
-        val characteristic = gattServer
-            ?.getService(serviceUUID)
-            ?.getCharacteristic(charUUID)
-
-        characteristic?.value = packet
-        notifyCharacteristic(device, characteristic)
-
-        //val msgText0 = "Sent: ${data[0]}: ${data[1]},${data[2]},${data[3]},${data[4]}"
-        val msgText = "Packet: " + packet.joinToString(separator = ", ") { it.toString() }
-
-        onEvent(msgText)
-    }
+//    fun sendCommandNotification4MotorPos(cmnd: Byte, iPos: Float) {
+//        if (!hasBluetoothConnectPermission()) {
+//            return onEvent("Missing BLUETOOTH_CONNECT permission")
+//        }
+//        val device = connectedDevice ?: return onEvent("No device connected")
+//        val packet = ByteArray(3)
+//        packet[0] = 242.toByte() // command type
+//        // set pos data to motors 1-4
+//        packet[1] = cmnd
+//        packet[2] = iPos.toInt().toByte()
+//        val characteristic = gattServer
+//            ?.getService(serviceUUID)
+//            ?.getCharacteristic(charUUID)
+//
+//        characteristic?.value = packet
+//        notifyCharacteristic(device, characteristic)
+//
+//        //val msgText0 = "Sent: ${data[0]}: ${data[1]},${data[2]},${data[3]},${data[4]}"
+//        val msgText = "Packet: " + packet.joinToString(separator = ", ") { it.toString() }
+//
+//        onEvent(msgText)
+//    }
     fun sendCommandNotification(cmnd: Byte, iVal: Int = 0) {
         if (!hasBluetoothConnectPermission()) {
             return onEvent("Missing BLUETOOTH_CONNECT permission")
@@ -577,31 +577,31 @@ class NimbleServer(private val context: Context) {
         movementType = 0
         onEvent("setMotorSTOP")
     }
-    fun sendCommand(command: Byte) {
-        if (!hasBluetoothConnectPermission()) {
-            return onEvent("Missing BLUETOOTH_CONNECT permission")
-        }
-        val device = connectedDevice ?: return onEvent("No device connected")
+//    fun sendCommand(command: Byte) {
+//        if (!hasBluetoothConnectPermission()) {
+//            return onEvent("Missing BLUETOOTH_CONNECT permission")
+//        }
+//        val device = connectedDevice ?: return onEvent("No device connected")
+//
+//        motors[command.toInt()] = 1
+//        val data = ByteArray(2)
+//        data[0] = 2
+//        data[1] = command
+//        val characteristic = gattServer
+//            ?.getService(serviceUUID)
+//            ?.getCharacteristic(charUUID)
+//
+//        characteristic?.value = data
+//        notifyCharacteristic(device, characteristic)
+//
+//        val msgText = "command: ${data[0]}: ${data[1]}"
+//
+//        onEvent(msgText)
+//    }
 
-        motors[command.toInt()] = 1
-        val data = ByteArray(2)
-        data[0] = 2
-        data[1] = command
-        val characteristic = gattServer
-            ?.getService(serviceUUID)
-            ?.getCharacteristic(charUUID)
-
-        characteristic?.value = data
-        notifyCharacteristic(device, characteristic)
-
-        val msgText = "command: ${data[0]}: ${data[1]}"
-
-        onEvent(msgText)
-    }
-
-    fun subscribeEvent() {
-        onEvent("Subscribe requested")
-    }
+//    fun subscribeEvent() {
+//        onEvent("Subscribe requested")
+//    }
 
     fun subscribe() {
         if (!hasBluetoothConnectPermission()) {
@@ -715,31 +715,28 @@ class NimbleServer(private val context: Context) {
         onEvent("Server shutdown")
     }
 
-    fun setMotor(index: Int) {
-        motors[index] = movementType
-        val msg = "Motor: ${index} - ${movementType}"
-        onEvent(msg)
-    }
-    fun setMotorPos(index: Int, iPos : Int) {
-        motors[index] = movementType
-        val msg = "Motor: ${index} - ${movementType} - Pos: ${iPos}"
-        onEvent(msg)
-    }
+//    fun setMotor(index: Int) {
+//        motors[index] = movementType
+//        val msg = "Motor: ${index} - ${movementType}"
+//        onEvent(msg)
+//    }
+//    fun setMotorPos(index: Int, iPos : Int) {
+//        motors[index] = movementType
+//        //val msg = "Motor: ${index} - ${movementType} - Pos: ${iPos}"
+//        val msg = "Motor: $index - $movementType - Pos: $iPos"
+//        onEvent(msg)
+//    }
     // Move motors to abs position 0-100
-    fun setMotorsAbsPos(index: Int, iPos: Int)
-    {
-        // Index: 1-4
-        motorsAbsPos[index] = iPos.toByte()
-    }
+//    fun setMotorsAbsPos(index: Int, iPos: Int)
+//    {
+//        // Index: 1-4
+//        motorsAbsPos[index] = iPos.toByte()
+//    }
     // Move the motors FWD/BWD iAction encoders steps
-    fun setMotorsAction(index: Int, moveType: Int, iSteps: Int)
-    {
-        motorsAction[index*2-1] = moveType.toByte()
-        motorsAction[index*2] = iSteps.toByte()
-    }
-    fun setMotorsPos()
-    {
-
-    }
+//    fun setMotorsAction(index: Int, moveType: Int, iSteps: Int)
+//    {
+//        motorsAction[index*2-1] = moveType.toByte()
+//        motorsAction[index*2] = iSteps.toByte()
+//    }
 }
 
