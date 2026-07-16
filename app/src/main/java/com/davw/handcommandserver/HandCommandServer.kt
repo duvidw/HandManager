@@ -442,6 +442,119 @@ class NimbleServer(private val context: Context) {
         notifyCharacteristic(device, characteristic)
 
     }
+    fun sendCommandNotification(cmnd: Byte, iVal: Int = 0) {
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+        val device = connectedDevice ?: return onEvent("No device connected")
+        val packet = ByteArray(3)
+        packet[0] = 240.toByte()
+        packet[1] = cmnd
+        packet[2] = iVal.toByte()
+        val characteristic = gattServer
+            ?.getService(serviceUUID)
+            ?.getCharacteristic(charUUID)
+
+        characteristic?.value = packet
+        notifyCharacteristic(device, characteristic)
+
+        //val msgText0 = "Sent: ${data[0]}: ${data[1]},${data[2]},${data[3]},${data[4]}"
+        val msgText = "Packet: " + packet.joinToString(separator = ", ") { it.toString() }
+
+        onEvent(msgText)
+    }
+    fun sendNavigationNotification(screenId: Int) {
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+        val device = connectedDevice ?: return onEvent("No device connected")
+        val packet = ByteArray(3)
+        packet[0] = 244.toByte()
+        packet[1] = screenId.toByte()
+        packet[2] = 0
+        val characteristic = gattServer
+            ?.getService(serviceUUID)
+            ?.getCharacteristic(charUUID)
+
+        characteristic?.value = packet
+        notifyCharacteristic(device, characteristic)
+
+        val msgText = "Screen packet: " + packet.joinToString(separator = ", ") { it.toString() }
+        onEvent(msgText)
+    }
+    fun setMotorFRWD() {
+        movementType = 1
+        onEvent("setMotorFRWD")
+    }
+    fun setMotorBKWD() {
+        movementType = 2
+        onEvent("setMotorBKWD")
+    }
+    fun absPosMotor() {
+        movementType = 3
+        onEvent("setPosMotor")
+    }
+    fun setMotorSTOP() {
+        movementType = 0
+        onEvent("setMotorSTOP")
+    }
+    @SuppressLint("MissingPermission")
+    private fun restartGattServerForNextConnection() {
+        if (!hasBluetoothConnectPermission() || !hasBluetoothAdvertisePermission()) {
+            onEvent("Missing Bluetooth permission to restart server")
+            return
+        }
+
+        runCatching {
+            advertiser?.stopAdvertising(advertiseCallback)
+        }.onFailure {
+            onEvent("Stop advertise failed: ${it.message}")
+        }
+        advertiser = null
+
+        runCatching {
+            gattServer?.close()
+        }.onFailure {
+            onEvent("Gatt close failed: ${it.message}")
+        }
+        gattServer = null
+
+        mainHandler.removeCallbacksAndMessages(null)
+        mainHandler.postDelayed({
+            start(context)
+            onEvent("Server restarted and ready for new connection")
+        }, 300)
+    }
+
+    @SuppressLint("MissingPermission")
+    fun shutdown() {
+        mainHandler.removeCallbacksAndMessages(null)
+        connectedDevice?.let { device ->
+            runCatching {
+                cancelDeviceConnection(device)
+            }.onFailure {
+                onEvent("Disconnect failed: ${it.message}")
+            }
+        }
+        connectedDevice = null
+
+        runCatching {
+            advertiser?.stopAdvertising(advertiseCallback)
+        }.onFailure {
+            onEvent("Stop advertise failed: ${it.message}")
+        }
+        advertiser = null
+
+        runCatching {
+            gattServer?.close()
+        }.onFailure {
+            onEvent("Gatt close failed: ${it.message}")
+        }
+        gattServer = null
+        onEvent("Server shutdown")
+    }
+
+    // Legacy commented functions moved to end-of-file for easier cleanup.
 //    fun sendNotification_0(ty : Int) {
 //        if (!hasBluetoothConnectPermission()) {
 //            return onEvent("Missing BLUETOOTH_CONNECT permission")
@@ -538,27 +651,6 @@ class NimbleServer(private val context: Context) {
 //
 //        onEvent(msgText)
 //    }
-    fun sendCommandNotification(cmnd: Byte, iVal: Int = 0) {
-        if (!hasBluetoothConnectPermission()) {
-            return onEvent("Missing BLUETOOTH_CONNECT permission")
-        }
-        val device = connectedDevice ?: return onEvent("No device connected")
-        val packet = ByteArray(3)
-        packet[0] = 240.toByte()
-        packet[1] = cmnd
-        packet[2] = iVal.toByte()
-        val characteristic = gattServer
-            ?.getService(serviceUUID)
-            ?.getCharacteristic(charUUID)
-
-        characteristic?.value = packet
-        notifyCharacteristic(device, characteristic)
-
-        //val msgText0 = "Sent: ${data[0]}: ${data[1]},${data[2]},${data[3]},${data[4]}"
-        val msgText = "Packet: " + packet.joinToString(separator = ", ") { it.toString() }
-
-        onEvent(msgText)
-    }
 //    fun sendCommandNotificationToMotor(cmnd: Byte, iMotor: Int = 0) {
 //        if (!hasBluetoothConnectPermission()) {
 //            return onEvent("Missing BLUETOOTH_CONNECT permission")
@@ -580,41 +672,6 @@ class NimbleServer(private val context: Context) {
 //
 //        onEvent(msgText)
 //    }
-    fun sendNavigationNotification(screenId: Int) {
-        if (!hasBluetoothConnectPermission()) {
-            return onEvent("Missing BLUETOOTH_CONNECT permission")
-        }
-        val device = connectedDevice ?: return onEvent("No device connected")
-        val packet = ByteArray(3)
-        packet[0] = 244.toByte()
-        packet[1] = screenId.toByte()
-        packet[2] = 0
-        val characteristic = gattServer
-            ?.getService(serviceUUID)
-            ?.getCharacteristic(charUUID)
-
-        characteristic?.value = packet
-        notifyCharacteristic(device, characteristic)
-
-        val msgText = "Screen packet: " + packet.joinToString(separator = ", ") { it.toString() }
-        onEvent(msgText)
-    }
-    fun setMotorFRWD() {
-        movementType = 1
-        onEvent("setMotorFRWD")
-    }
-    fun setMotorBKWD() {
-        movementType = 2
-        onEvent("setMotorBKWD")
-    }
-    fun absPosMotor() {
-        movementType = 3
-        onEvent("setPosMotor")
-    }
-    fun setMotorSTOP() {
-        movementType = 0
-        onEvent("setMotorSTOP")
-    }
 //    fun sendCommand(command: Byte) {
 //        if (!hasBluetoothConnectPermission()) {
 //            return onEvent("Missing BLUETOOTH_CONNECT permission")
@@ -636,11 +693,9 @@ class NimbleServer(private val context: Context) {
 //
 //        onEvent(msgText)
 //    }
-
 //    fun subscribeEvent() {
 //        onEvent("Subscribe requested")
 //    }
-
 //    fun subscribe() {
 //        if (!hasBluetoothConnectPermission()) {
 //            return onEvent("Missing BLUETOOTH_CONNECT permission")
@@ -681,12 +736,10 @@ class NimbleServer(private val context: Context) {
 //
 //        restartGattServerForNextConnection()
 //    }
-//
 //    fun ensureAdvertising() {
 //        // Public method to ensure the server is advertising and ready for new connections
 //        startAdvertising()
 //    }
-
 //    fun sendDisconnectNotification() {
 //        // Send a disconnect/shutdown notification to the esp32
 //        try {
@@ -697,61 +750,6 @@ class NimbleServer(private val context: Context) {
 //        }
 //    }
 
-    @SuppressLint("MissingPermission")
-    private fun restartGattServerForNextConnection() {
-        if (!hasBluetoothConnectPermission() || !hasBluetoothAdvertisePermission()) {
-            onEvent("Missing Bluetooth permission to restart server")
-            return
-        }
-
-        runCatching {
-            advertiser?.stopAdvertising(advertiseCallback)
-        }.onFailure {
-            onEvent("Stop advertise failed: ${it.message}")
-        }
-        advertiser = null
-
-        runCatching {
-            gattServer?.close()
-        }.onFailure {
-            onEvent("Gatt close failed: ${it.message}")
-        }
-        gattServer = null
-
-        mainHandler.removeCallbacksAndMessages(null)
-        mainHandler.postDelayed({
-            start(context)
-            onEvent("Server restarted and ready for new connection")
-        }, 300)
-    }
-
-    @SuppressLint("MissingPermission")
-    fun shutdown() {
-        mainHandler.removeCallbacksAndMessages(null)
-        connectedDevice?.let { device ->
-            runCatching {
-                cancelDeviceConnection(device)
-            }.onFailure {
-                onEvent("Disconnect failed: ${it.message}")
-            }
-        }
-        connectedDevice = null
-
-        runCatching {
-            advertiser?.stopAdvertising(advertiseCallback)
-        }.onFailure {
-            onEvent("Stop advertise failed: ${it.message}")
-        }
-        advertiser = null
-
-        runCatching {
-            gattServer?.close()
-        }.onFailure {
-            onEvent("Gatt close failed: ${it.message}")
-        }
-        gattServer = null
-        onEvent("Server shutdown")
-    }
 
 //    fun setMotor(index: Int) {
 //        motors[index] = movementType
