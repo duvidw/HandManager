@@ -47,7 +47,7 @@ import androidx.compose.runtime.setValue
 // const val positionDelta : Float= 5.0f
 var numPerSecond = 1L
 var minSendIntervalMs = 1000L / numPerSecond  // 1L // 6 updates per second max
-val verHeader = "Hand Commander v0.0.2"
+val verHeader = "Hand Commander v0.0.3"
 
 enum class CommandToHand(val value: Int) {
     STOP(0),
@@ -344,7 +344,7 @@ fun BleScreen(
         MainButsCommands(viewModel)
         Spacer(modifier = Modifier
             .fillMaxWidth()
-            .height(10.dp)
+            .height(20.dp)
             .background(Color.White)
         )
         Spacer(modifier = Modifier
