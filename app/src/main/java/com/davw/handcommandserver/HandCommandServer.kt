@@ -322,9 +322,9 @@ class NimbleServer(private val context: Context) {
                 msgText = "Calibration"
                 motorsPacket[0] = CommandToHand.CALIBRATION.value.toByte()
             }
-            CommandToHand.SUBSCRIBE.value -> {
-                msgText = "Subscribe"
-                motorsPacket[0] = CommandToHand.SUBSCRIBE.value.toByte()
+            CommandToHand.STEP.value -> {
+                msgText = "Step"
+                motorsPacket[0] = CommandToHand.STEP.value.toByte()
             }
             CommandToHand.FORWARD.value -> {
                 msgText = "Forward"
@@ -334,9 +334,14 @@ class NimbleServer(private val context: Context) {
                 msgText = "Backward"
                 motorsPacket[0] = CommandToHand.BACKWARD.value.toByte()
             }
-            CommandToHand.STEP.value -> {
-                msgText = "Step"
-                motorsPacket[0] = CommandToHand.STEP.value.toByte()
+            CommandToHand.DISCONNECT.value -> {
+                // disconnect the device
+                //disconnect()
+                println("Requested hard disconnect and server restart")
+
+                msgText = "Disconnect"
+                //motorsPacket[0] = CommandToHand.DISCONNECT.value.toByte()
+                sendDisconnectNotification()
             }
             CommandToHand.STOP.value -> {
                 msgText = "Stop"
@@ -348,6 +353,39 @@ class NimbleServer(private val context: Context) {
             }
             else -> msgText = "Unknown Command"
         }
+        msgText = msgConnect + msgText + ": " + motorsPacket.joinToString(separator = ", ") { it.toString() }
+        onEvent(msgText)
+
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+        if (!connectionOK) {
+            return  // onEvent("No device connected") // no need event
+        }
+        val device = connectedDevice ?: return onEvent("No device connected")
+
+        val characteristic = gattServer
+            ?.getService(serviceUUID)
+            ?.getCharacteristic(charUUID)
+
+        characteristic?.value = motorsPacket
+        notifyCharacteristic(device, characteristic)
+
+    }
+    fun sendDisconnectNotification() {
+        // Test for connection
+        var msgConnect = "  "
+        var connectionOK = true
+        if (!hasBluetoothConnectPermission()) {
+            return onEvent("Missing BLUETOOTH_CONNECT permission")
+        }
+        if (connectedDevice == null) {
+            connectionOK = false
+            msgConnect = "* "
+        }
+        var msgText: String
+        msgText = "Disconnect"
+        motorsPacket[0] = CommandToHand.DISCONNECT.value.toByte()
         msgText = msgConnect + msgText + ": " + motorsPacket.joinToString(separator = ", ") { it.toString() }
         onEvent(msgText)
 
@@ -457,27 +495,27 @@ class NimbleServer(private val context: Context) {
 //
 //        onEvent(msgText)
 //    }
-    fun sendCommandNotificationPos(cmnd: Byte, iPos: Float) {
-        if (!hasBluetoothConnectPermission()) {
-            return onEvent("Missing BLUETOOTH_CONNECT permission")
-        }
-        val device = connectedDevice ?: return onEvent("No device connected")
-        val packet = ByteArray(3)
-        packet[0] = 241.toByte()
-        packet[1] = cmnd
-        packet[2] = iPos.toInt().toByte()
-        val characteristic = gattServer
-            ?.getService(serviceUUID)
-            ?.getCharacteristic(charUUID)
-
-        characteristic?.value = packet
-        notifyCharacteristic(device, characteristic)
-
-        //val msgText0 = "Sent: ${data[0]}: ${data[1]},${data[2]},${data[3]},${data[4]}"
-        val msgText = "Packet: " + packet.joinToString(separator = ", ") { it.toString() }
-
-        onEvent(msgText)
-    }
+//    fun sendCommandNotificationPos(cmnd: Byte, iPos: Float) {
+//        if (!hasBluetoothConnectPermission()) {
+//            return onEvent("Missing BLUETOOTH_CONNECT permission")
+//        }
+//        val device = connectedDevice ?: return onEvent("No device connected")
+//        val packet = ByteArray(3)
+//        packet[0] = 241.toByte()
+//        packet[1] = cmnd
+//        packet[2] = iPos.toInt().toByte()
+//        val characteristic = gattServer
+//            ?.getService(serviceUUID)
+//            ?.getCharacteristic(charUUID)
+//
+//        characteristic?.value = packet
+//        notifyCharacteristic(device, characteristic)
+//
+//        //val msgText0 = "Sent: ${data[0]}: ${data[1]},${data[2]},${data[3]},${data[4]}"
+//        val msgText = "Packet: " + packet.joinToString(separator = ", ") { it.toString() }
+//
+//        onEvent(msgText)
+//    }
 //    fun sendCommandNotification4MotorPos(cmnd: Byte, iPos: Float) {
 //        if (!hasBluetoothConnectPermission()) {
 //            return onEvent("Missing BLUETOOTH_CONNECT permission")
@@ -521,27 +559,27 @@ class NimbleServer(private val context: Context) {
 
         onEvent(msgText)
     }
-    fun sendCommandNotificationToMotor(cmnd: Byte, iMotor: Int = 0) {
-        if (!hasBluetoothConnectPermission()) {
-            return onEvent("Missing BLUETOOTH_CONNECT permission")
-        }
-        val device = connectedDevice ?: return onEvent("No device connected")
-        val packet = ByteArray(3)
-        packet[0] = 243.toByte()
-        packet[1] = cmnd
-        packet[2] = (iMotor + 1).toByte()
-        val characteristic = gattServer
-            ?.getService(serviceUUID)
-            ?.getCharacteristic(charUUID)
-
-        characteristic?.value = packet
-        notifyCharacteristic(device, characteristic)
-
-        //val msgText0 = "Sent: ${data[0]}: ${data[1]},${data[2]},${data[3]},${data[4]}"
-        val msgText = "Packet: " + packet.joinToString(separator = ", ") { it.toString() }
-
-        onEvent(msgText)
-    }
+//    fun sendCommandNotificationToMotor(cmnd: Byte, iMotor: Int = 0) {
+//        if (!hasBluetoothConnectPermission()) {
+//            return onEvent("Missing BLUETOOTH_CONNECT permission")
+//        }
+//        val device = connectedDevice ?: return onEvent("No device connected")
+//        val packet = ByteArray(3)
+//        packet[0] = 243.toByte()
+//        packet[1] = cmnd
+//        packet[2] = (iMotor + 1).toByte()
+//        val characteristic = gattServer
+//            ?.getService(serviceUUID)
+//            ?.getCharacteristic(charUUID)
+//
+//        characteristic?.value = packet
+//        notifyCharacteristic(device, characteristic)
+//
+//        //val msgText0 = "Sent: ${data[0]}: ${data[1]},${data[2]},${data[3]},${data[4]}"
+//        val msgText = "Packet: " + packet.joinToString(separator = ", ") { it.toString() }
+//
+//        onEvent(msgText)
+//    }
     fun sendNavigationNotification(screenId: Int) {
         if (!hasBluetoothConnectPermission()) {
             return onEvent("Missing BLUETOOTH_CONNECT permission")
@@ -603,61 +641,61 @@ class NimbleServer(private val context: Context) {
 //        onEvent("Subscribe requested")
 //    }
 
-    fun subscribe() {
-        if (!hasBluetoothConnectPermission()) {
-            return onEvent("Missing BLUETOOTH_CONNECT permission")
-        }
-        connectedDevice?.let {
-            cancelDeviceConnection(it)
-            onEvent("Disconnect requested")
-        }
-    }
-    fun disconnect() {
-        if (!hasBluetoothConnectPermission()) {
-            return onEvent("Missing BLUETOOTH_CONNECT permission")
-        }
+//    fun subscribe() {
+//        if (!hasBluetoothConnectPermission()) {
+//            return onEvent("Missing BLUETOOTH_CONNECT permission")
+//        }
+//        connectedDevice?.let {
+//            cancelDeviceConnection(it)
+//            onEvent("Disconnect requested")
+//        }
+//    }
+//    fun disconnect() {
+//        if (!hasBluetoothConnectPermission()) {
+//            return onEvent("Missing BLUETOOTH_CONNECT permission")
+//        }
+//
+//        val device = connectedDevice
+//        if (device == null) {
+//            onEvent("No device connected")
+//            restartGattServerForNextConnection()
+//            return
+//        }
+//
+//        runCatching {
+//            sendCommandNotification(0.toByte(), 0)
+//            onEvent("STOP command sent before disconnect")
+//        }.onFailure {
+//            onEvent("Error sending STOP: ${it.message}")
+//        }
+//
+//        runCatching {
+//            cancelDeviceConnection(device)
+//        }.onFailure {
+//            onEvent("Cancel connection failed: ${it.message}")
+//        }
+//
+//        connectedDevice = null
+//        onConnectionChanged(false)
+//        onEvent("Hard disconnect requested")
+//
+//        restartGattServerForNextConnection()
+//    }
+//
+//    fun ensureAdvertising() {
+//        // Public method to ensure the server is advertising and ready for new connections
+//        startAdvertising()
+//    }
 
-        val device = connectedDevice
-        if (device == null) {
-            onEvent("No device connected")
-            restartGattServerForNextConnection()
-            return
-        }
-
-        runCatching {
-            sendCommandNotification(0.toByte(), 0)
-            onEvent("STOP command sent before disconnect")
-        }.onFailure {
-            onEvent("Error sending STOP: ${it.message}")
-        }
-
-        runCatching {
-            cancelDeviceConnection(device)
-        }.onFailure {
-            onEvent("Cancel connection failed: ${it.message}")
-        }
-
-        connectedDevice = null
-        onConnectionChanged(false)
-        onEvent("Hard disconnect requested")
-
-        restartGattServerForNextConnection()
-    }
-
-    fun ensureAdvertising() {
-        // Public method to ensure the server is advertising and ready for new connections
-        startAdvertising()
-    }
-
-    fun sendDisconnectNotification() {
-        // Send a disconnect/shutdown notification to the esp32
-        try {
-            sendCommandNotification(0.toByte(), 0)  // STOP command
-            onEvent("Disconnect notification sent to device")
-        } catch (e: Exception) {
-            onEvent("Error sending disconnect notification: ${e.message}")
-        }
-    }
+//    fun sendDisconnectNotification() {
+//        // Send a disconnect/shutdown notification to the esp32
+//        try {
+//            sendCommandNotification(0.toByte(), 0)  // STOP command
+//            onEvent("Disconnect notification sent to device")
+//        } catch (e: Exception) {
+//            onEvent("Error sending disconnect notification: ${e.message}")
+//        }
+//    }
 
     @SuppressLint("MissingPermission")
     private fun restartGattServerForNextConnection() {

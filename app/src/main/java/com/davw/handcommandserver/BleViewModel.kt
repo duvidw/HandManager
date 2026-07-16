@@ -44,20 +44,20 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     //var motorAbsPosVals = IntArray(4) { 0}
 
     // 4 sliders, initial value = 50f
-    val _sliders = MutableStateFlow(FloatArray(5) { 50f })
+//    val _sliders = MutableStateFlow(FloatArray(5) { 50f })
     //val sliders = _sliders
 
-    fun updateSlider(index: Int, value: Float): Boolean{
-        val newArray = _sliders.value.clone()
-        newArray[index] = value
-        _sliders.value =newArray
-        server.motorAbsPosVals[index] = value.toInt()
-        return true
-    }
-    fun getSlider(index: Int): Float {
-        return server.motorAbsPosVals[index].toFloat()
-        //return (_sliders.value[index])
-    }
+//    fun updateSlider(index: Int, value: Float): Boolean{
+//        val newArray = _sliders.value.clone()
+//        newArray[index] = value
+//        _sliders.value =newArray
+//        server.motorAbsPosVals[index] = value.toInt()
+//        return true
+//    }
+//    fun getSlider(index: Int): Float {
+//        return server.motorAbsPosVals[index].toFloat()
+//        //return (_sliders.value[index])
+//    }
 
     //private val _commandStatus = MutableStateFlow("System Ready")
     //val statusText: StateFlow<String> = _commandStatus
@@ -102,30 +102,20 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             _events.update { it + "Missing BLUETOOTH_CONNECT permission" }
             return
         }
-        if (ty == 9) {
-            server.disconnect()
-            println("Requested hard disconnect and server restart")
-            return
-        }
+//        if (ty == 9) {
+//            server.disconnect()
+//            println("Requested hard disconnect and server restart")
+//            return
+//        }
         server.sendNotification(ty)
     }
 
-    fun subscribe() {
-        server.subscribe()
-    }
-    fun disconnect() {
-        server.disconnect()
-    }
 
     fun sendDisconnectNotification() {
         // Send explicit disconnect notification to ESP32
         server.sendDisconnectNotification()
     }
 
-    fun ensureReadyForNewConnection() {
-        // Explicitly ensure the server is advertising (useful if advertising stops unexpectedly)
-        server.ensureAdvertising()
-    }
 
     fun sendMotorsVelocity(ty : Int, motorNum: Int, value: Float) {
         if (!hasBluetoothConnectPermission()) {
@@ -151,15 +141,48 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         }
         server.sendNotificationSpecialCommand(ty)
     }
-    fun sendNewMotorPos(motorNum : Int, value: Float) {
-        setMotorAbsPos(motorNum, value.toInt())
-        sendNotification(1)
+    fun setMotorAbsPos(index: Int, iPos : Int)
+    {
+        server.motorAbsPosVals[index] = iPos
     }
+
+
+    fun updateCommandAction(index: Int, value: String) {
+        val current = directCommands[index]
+        directCommands[index] = current.copy(action = value)
+    }
+    fun sendDirectCommand(cmnd: Int) {
+        server.sendCommandNotification(cmnd.toByte())
+    }
+    fun notifyScreenChanged(screen: AppScreen) {
+        val screenId = when (screen) {
+            AppScreen.Main -> 1
+            AppScreen.DirectCommands -> 2
+        }
+        server.sendNavigationNotification(screenId)
+    }
+
+
+//    fun subscribe() {
+//        server.subscribe()
+//    }
+//    fun disconnect() {
+//        server.disconnect()
+//    }
+//    fun ensureReadyForNewConnection() {
+//        // Explicitly ensure the server is advertising (useful if advertising stops unexpectedly)
+//        server.ensureAdvertising()
+//    }
+
+//    fun sendNewMotorPos(motorNum : Int, value: Float) {
+//        setMotorAbsPos(motorNum, value.toInt())
+//        sendNotification(1)
+//    }
     /////// Make it here to send the packet for new motor position to the client
-    fun sendVelocityChanged(value: Float) {
-        setMotorAbsPos(0, value.toInt())
-        sendNotification(1)
-    }
+//    fun sendVelocityChanged(value: Float) {
+//        setMotorAbsPos(0, value.toInt())
+//        sendNotification(1)
+//    }
     //fun subscribe() = server.subscribe()
     //fun disconnect() = server.disconnect()
     //fun setMotorsPos() = server.setMotorsPos()
@@ -172,110 +195,47 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 //        server.setMotor(index)
 //        displayStatus()
 //    }
-    fun setMotorAbsPos(index: Int, iPos : Int)
-    {
-        server.motorAbsPosVals[index] = iPos
-    }
 
-    fun stopMotor()
-    {
-        //_commandStatus.value = "Stop Motor"
-        server.setMotorSTOP()
-        displayStatus()
-    }
-    fun forwardMotor()
-    {
-        //server.motorMovment = 1;
-        server.setMotorFRWD()
-        displayStatus()
-    }
-    fun backwardMotor()
-    {
-        //server.motorMovment = 2;
-        server.setMotorBKWD()
-        displayStatus()
-    }
-    fun absPosMotor()
-    {
-        //server.motorMovment = 2;
-        server.absPosMotor()
-        displayStatus()
-    }
+//    fun commandStatus() {
+//        //_commandStatus.value = "Motor Status"
+//    }
+//    fun replaceDirectCommands(loaded: List<DirectCommandConfig>) {
+//        if (loaded.size != directCommands.size) {
+//            throw IllegalArgumentException("Expected ${directCommands.size} commands, found ${loaded.size}")
+//        }
+//        loaded.forEachIndexed { index, command ->
+//            directCommands[index] = command
+//        }
+//    }
 
-    fun getButMotorColor(index : Int) : Color
-    {
-        val mt: Int = server.motors[index-1].toInt()
-        var col : Color = Color.Blue
-        if (mt == 0 )
-        {
-           col = Color.Red
-        }
-        else if (mt== 1) {
-            col = Color.Blue
-        }
-        else if (mt== 2){
-            col = Color.Green
-        }
-        else {
-            col = Color.Magenta //Cyan
-        }
-        return col
-    }
-    fun commandStatus() {
-        //_commandStatus.value = "Motor Status"
-    }
-    fun updateCommandAction(index: Int, value: String) {
-        val current = directCommands[index]
-        directCommands[index] = current.copy(action = value)
-    }
-
-    fun replaceDirectCommands(loaded: List<DirectCommandConfig>) {
-        if (loaded.size != directCommands.size) {
-            throw IllegalArgumentException("Expected ${directCommands.size} commands, found ${loaded.size}")
-        }
-        loaded.forEachIndexed { index, command ->
-            directCommands[index] = command
-        }
-    }
-
-    fun sendText(toString: String) {
-        TODO("Not yet implemented")
-    }
-    fun sendDirectCommand(cmnd: Int) {
-        server.sendCommandNotification(cmnd.toByte())
-    }
-    fun sendIntCommand(cmnd: Int, iMotor: Int = 0) {
-        server.sendCommandNotificationToMotor(cmnd.toByte(),iMotor)
-    }
-    fun notifyScreenChanged(screen: AppScreen) {
-        val screenId = when (screen) {
-            AppScreen.Main -> 1
-            AppScreen.DirectCommands -> 2
-        }
-        server.sendNavigationNotification(screenId)
-    }
-    fun sendIntCommandPos(cmnd: Int) {
-        when (cmnd) {
-            0 -> {
-                Log.d("TAG","-0-")
-                server.sendCommandNotification(cmnd.toByte())
-            }
-            1,2,3,4 -> {
-                Log.d("TAG","cmnd: "+ cmnd.toString()+ getSlider(cmnd-1).toString())
-                server.sendCommandNotificationPos(cmnd.toByte(), getSlider(cmnd-1))
-            }
-            5,6,7,8 -> {
-                Log.d("TAG","One")
-                server.sendCommandNotification(cmnd.toByte())
-            }
-            9,10,11,12 -> {
-                Log.d("TAG","Two")
-                server.sendCommandNotification(cmnd.toByte())
-            }
-            else -> Log.d("TAG","Other"+ cmnd.toString())
-        }
-
-    }
+//    fun sendText(toString: String) {
+//        TODO("Not yet implemented")
+//    }
+//    fun sendIntCommand(cmnd: Int, iMotor: Int = 0) {
+//        server.sendCommandNotificationToMotor(cmnd.toByte(),iMotor)
+//    }
+//    fun sendIntCommandPos(cmnd: Int) {
+//        when (cmnd) {
+//            0 -> {
+//                Log.d("TAG","-0-")
+//                server.sendCommandNotification(cmnd.toByte())
+//            }
+//            1,2,3,4 -> {
+//                Log.d("TAG","cmnd: "+ cmnd.toString()+ getSlider(cmnd-1).toString())
+//                server.sendCommandNotificationPos(cmnd.toByte(), getSlider(cmnd-1))
+//            }
+//            5,6,7,8 -> {
+//                Log.d("TAG","One")
+//                server.sendCommandNotification(cmnd.toByte())
+//            }
+//            9,10,11,12 -> {
+//                Log.d("TAG","Two")
+//                server.sendCommandNotification(cmnd.toByte())
+//            }
+//            else -> Log.d("TAG","Other"+ cmnd.toString())
+//        }
+//
+//    }
 
     private fun hasBluetoothConnectPermission(): Boolean {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||

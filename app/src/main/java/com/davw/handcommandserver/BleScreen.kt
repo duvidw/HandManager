@@ -59,7 +59,9 @@ enum class CommandToHand(val value: Int) {
     POSITION(6),
     CALIBRATION(7),
     VELOCITY(8),
-    SUBSCRIBE(9);
+    SUBSCRIBE(9),
+    EMERGENCY_STOP(10),
+    DISCONNECT(11);
 
     companion object {
         fun fromValue(value: Int): CommandToHand? = entries.find { it.value == value }
@@ -78,15 +80,18 @@ fun MainButsCommands(viewModel: BleViewModel) {
 
     val numbers = (1..6).toList()
 
-    val numCmd = intArrayOf(CommandToHand.CALIBRATION.value,
-        CommandToHand.SUBSCRIBE.value,
+    val numCmd = intArrayOf(
+        CommandToHand.CALIBRATION.value,
+        CommandToHand.STEP.value,
         CommandToHand.FORWARD.value,
         CommandToHand.BACKWARD.value,
-        CommandToHand.STEP.value,
+        CommandToHand.DISCONNECT.value,
         CommandToHand.STOP.value)
 
     val buttonsText = arrayOf(
-        "Calibrate", "Subscribe", "Forward", "Backward",  "Step", "Stop")
+        // "Calibrate", "Subscribe", "Forward", "Backward",  "Step", "Stop")
+        // "Calibrate", "Step", "Forward", "Backward",  "Subscribe", "Stop")
+        "Calibrate", "Step", "Forward", "Backward",  "Disconnect", "Stop")
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -339,12 +344,12 @@ fun BleScreen(
         MainButsCommands(viewModel)
         Spacer(modifier = Modifier
             .fillMaxWidth()
-            .height(2.dp)
+            .height(10.dp)
             .background(Color.White)
         )
         Spacer(modifier = Modifier
             .fillMaxWidth()
-            .height(4.dp)
+            .height(8.dp)
             .background(connectColor)
         )
 
@@ -375,16 +380,16 @@ fun BleScreen(
             .height(2.dp)
             .background(Color.White))
 
-        val numbers = (1..8).toList()
+        val numbers = (1..5).toList()
 
        // val numCmd = intArrayOf(21, 22, 23, 24, 25, 26, 27, 28)
         val buttonsText = arrayOf(
-            "Sub", "2", "3", "4",
-            "5", "6", "7", "8"
+            "1", "2", "3", "4",
+            "5" //, "6", "7", "8"
         )
 
         LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
+            columns = GridCells.Fixed(5),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 2.dp, bottom = 2.dp, start = 10.dp, end = 10.dp),
@@ -461,14 +466,14 @@ fun BleScreen(
 
 fun specialCommandDo(id: Int, viewModel: BleViewModel) {
     when (id) {
-        1 -> viewModel.subscribe()
+        1 -> numPerSecond = 1L
         2 -> numPerSecond = 2L
         3 -> numPerSecond = 3L
         4 -> numPerSecond = 4L
         5 -> viewModel.sendNotificationSpecialCommand(25)
-        6 -> viewModel.sendNotificationSpecialCommand(26)
-        7 -> viewModel.sendNotificationSpecialCommand(27)
-        8 -> viewModel.sendNotificationSpecialCommand(28)
+//        6 -> viewModel.sendNotificationSpecialCommand(26)
+//        7 -> viewModel.sendNotificationSpecialCommand(27)
+//        8 -> viewModel.sendNotificationSpecialCommand(28)
 
     }
 }

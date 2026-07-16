@@ -29,7 +29,7 @@ android {
         getByName("debug") {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
-            // debuggable = true
+            isDebuggable = true
         }
         getByName("release") {
             isMinifyEnabled = true // Enables code shrinking
