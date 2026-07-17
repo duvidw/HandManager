@@ -47,7 +47,7 @@ import androidx.compose.runtime.setValue
 // const val positionDelta : Float= 5.0f
 var numPerSecond = 1L
 var minSendIntervalMs = 1000L / numPerSecond  // 1L // 6 updates per second max
-val verHeader = "Hand Commander v0.0.3"
+val verHeader = "Hand Commander v0.0.4"
 
 enum class CommandToHand(val value: Int) {
     STOP(0),
