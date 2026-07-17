@@ -444,8 +444,8 @@ fun BleScreen(
                 Text("Prev")
             }
             Button(onClick = {
-                viewModel.sendDisconnectNotification()
-                //viewModel.disconnectAndCloseServer()
+                viewModel.sendUnsubscribeAndDisconnectNotification()
+                viewModel.unsubscribeThenShutdown()
                 // Cast context to Activity and call finishAndRemoveTask
                 (context as? Activity)?.finishAndRemoveTask()
             }) {
@@ -477,4 +477,3 @@ fun specialCommandDo(id: Int, viewModel: BleViewModel) {
 
     }
 }
-//================================================================================

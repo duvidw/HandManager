@@ -85,6 +85,10 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         // Shut down BLE server and release all resources when the activity is fully destroyed
         if (isFinishing) {
+            //viewModel.isConnected()
+            //{
+                viewModel.stopServer()
+            //}
             println("MainActivity is finishing, disconnecting and closing BLE server.")
             viewModel.disconnectAndCloseServer()
         }

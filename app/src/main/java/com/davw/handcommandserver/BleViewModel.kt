@@ -21,11 +21,6 @@ import java.io.IOException
 class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Called by the OS when the ViewModel is permanently destroyed (app is finishing). */
-    override fun onCleared() {
-        super.onCleared()
-        server.shutdown()
-        serverStarted = false
-    }
 
     private val server = NimbleServer(application)
     private val defaultCommandCount = 8
@@ -79,6 +74,11 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         server.start(application.applicationContext)
         serverStarted = true
     }
+    override fun onCleared() {
+        super.onCleared()
+        server.shutdown()
+        serverStarted = false
+    }
 
     fun disconnectAndCloseServer() {
         server.shutdown()
@@ -90,17 +90,17 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             _events.update { it + "Missing BLUETOOTH_CONNECT permission" }
             return
         }
-//        if (ty == 9) {
-//            server.disconnect()
-//            println("Requested hard disconnect and server restart")
-//            return
-//        }
         server.sendNotification(ty)
     }
 
 
     fun sendDisconnectNotification() {
         // Send explicit disconnect notification to ESP32
+        server.sendDisconnectNotification()
+    }
+
+    fun sendUnsubscribeAndDisconnectNotification() {
+        server.sendUnsubscribeNotification()
         server.sendDisconnectNotification()
     }
 
@@ -184,91 +184,13 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun shutdown() {
+    fun stopServer() {
+        print("Stopping server...")
         server.shutdown()
     }
 
-    // Legacy commented functions moved to end-of-file for easier cleanup.
-//    fun updateSlider(index: Int, value: Float): Boolean{
-//        val newArray = _sliders.value.clone()
-//        newArray[index] = value
-//        _sliders.value =newArray
-//        server.motorAbsPosVals[index] = value.toInt()
-//        return true
-//    }
-//    fun getSlider(index: Int): Float {
-//        return server.motorAbsPosVals[index].toFloat()
-//        //return (_sliders.value[index])
-//    }
-//    fun subscribe() {
-//        server.subscribe()
-//    }
-//    fun disconnect() {
-//        server.disconnect()
-//    }
-//    fun ensureReadyForNewConnection() {
-//        // Explicitly ensure the server is advertising (useful if advertising stops unexpectedly)
-//        server.ensureAdvertising()
-//    }
-//    fun sendNewMotorPos(motorNum : Int, value: Float) {
-//        setMotorAbsPos(motorNum, value.toInt())
-//        sendNotification(1)
-//    }
-//    fun sendVelocityChanged(value: Float) {
-//        setMotorAbsPos(0, value.toInt())
-//        sendNotification(1)
-//    }
-//    fun subscribe() = server.subscribe()
-//    fun disconnect() = server.disconnect()
-//    fun setMotorsPos() = server.setMotorsPos()
-//    fun sendCommand(command: Byte) = server.sendCommand(command)
-//    fun setMotorPos(index: Int, iPos: Int){
-//        server.setMotorPos(index, iPos)
-//        displayStatus()
-//    }
-//    fun setMotor(index: Int){
-//        server.setMotor(index)
-//        displayStatus()
-//    }
-//    fun commandStatus() {
-//        //_commandStatus.value = "Motor Status"
-//    }
-//    fun replaceDirectCommands(loaded: List<DirectCommandConfig>) {
-//        if (loaded.size != directCommands.size) {
-//            throw IllegalArgumentException("Expected ${directCommands.size} commands, found ${loaded.size}")
-//        }
-//        loaded.forEachIndexed { index, command ->
-//            directCommands[index] = command
-//        }
-//    }
-//    fun sendText(toString: String) {
-//        TODO("Not yet implemented")
-//    }
-//    fun sendIntCommand(cmnd: Int, iMotor: Int = 0) {
-//        server.sendCommandNotificationToMotor(cmnd.toByte(),iMotor)
-//    }
-//    fun sendIntCommandPos(cmnd: Int) {
-//        when (cmnd) {
-//            0 -> {
-//                Log.d("TAG","-0-")
-//                server.sendCommandNotification(cmnd.toByte())
-//            }
-//            1,2,3,4 -> {
-//                Log.d("TAG","cmnd: "+ cmnd.toString()+ getSlider(cmnd-1).toString())
-//                server.sendCommandNotificationPos(cmnd.toByte(), getSlider(cmnd-1))
-//            }
-//            5,6,7,8 -> {
-//                Log.d("TAG","One")
-//                server.sendCommandNotification(cmnd.toByte())
-//            }
-//            9,10,11,12 -> {
-//                Log.d("TAG","Two")
-//                server.sendCommandNotification(cmnd.toByte())
-//            }
-//            else -> Log.d("TAG","Other"+ cmnd.toString())
-//        }
-//
-//    }
-
-
+    fun unsubscribeThenShutdown() {
+        server.unsubscribeThenShutdown()
+        serverStarted = false
+    }
 }
